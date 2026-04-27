@@ -7,9 +7,10 @@
 #
 # IMPORTANTE: el primer arranque requiere login one-off interactivo en bridge-cli:
 #   ssh dokploy
-#   docker compose -f /etc/dokploy/compose/<app>/code/docker-compose.yml \
-#                  run --rm bridge /bin/bash -c "/app/Bridge --cli"
-#   Dentro: login → 2FA → info (copiar "bridge password") → exit
+#   cd /etc/dokploy/compose/<app>/code
+#   docker compose up -d bridge
+#   docker compose run --rm --entrypoint="" bridge /protonmail/proton-bridge --cli
+#   Dentro: login → 2FA → info (copiar "Bridge password") → exit
 #   Pegar el bridge password en PROTON_BRIDGE_PASS (env del compose en Dokploy)
 #
 # Tras el login inicial, el volumen `bridge-data` persiste el vault y los
@@ -34,10 +35,13 @@ services:
     networks:
       - proton-net
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "1143"]
+      # nc no está en la imagen base shenxn/protonmail-bridge.
+      # bash con /dev/tcp es portable y no requiere binarios extra.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/1143' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   mcp:
     build: .
