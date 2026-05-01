@@ -1,4 +1,4 @@
-# Contributing to `@alexendros/protonmail-mcp`
+# Contributing to `@alexendros/proton-mail-mcp`
 
 Thanks for thinking about contributing. This is a small, focused project — its scope is intentionally narrow ("expose Proton Mail capabilities to MCP clients **through Bridge**, never around it"). Reading this once will save us both round-trips.
 
