@@ -1,4 +1,4 @@
-# Dokploy docker-compose para proton-mail-mcp en HTTP mode.
+# Dokploy docker-compose para protonmail-mcp en HTTP mode.
 #
 # Este stack arranca:
 #   - bridge: Proton Mail Bridge headless (imagen community `shenxn/protonmail-bridge`)
@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bridge
-    image: proton-mail-mcp-bridge:latest
+    image: protonmail-mcp-bridge:latest
     restart: unless-stopped
     volumes:
       - bridge-data:/root
