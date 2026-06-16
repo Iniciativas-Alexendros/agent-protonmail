@@ -99,6 +99,7 @@ jobs:
 
       - name: Job summary
         if: always()
+        continue-on-error: true
         uses: Alexendros/plantillas/.github/actions/job-summary@main
         with:
           title: "Release · ${{ github.ref_name }}"
