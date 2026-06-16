@@ -18,11 +18,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Iniciativas-Alexendros/protonmail-mcp.git"
+    "url": "git+https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode.git"
   },
-  "homepage": "https://github.com/Iniciativas-Alexendros/protonmail-mcp#readme",
+  "homepage": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode#readme",
   "bugs": {
-    "url": "https://github.com/Iniciativas-Alexendros/protonmail-mcp/issues"
+    "url": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/issues"
   },
   "keywords": [
     "mcp",
@@ -50,7 +50,7 @@
     "express-rate-limit": "^8.4.1",
     "imapflow": "^1.0.189",
     "mailparser": "^3.7.2",
-    "nodemailer": "^8.0.6",
+    "nodemailer": "^8.0.11",
     "zod": "^4.3.6"
   },
   "devDependencies": {

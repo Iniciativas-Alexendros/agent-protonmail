@@ -5,6 +5,25 @@ All notable changes to `@alexendros/protonmail-mcp` (renamed back from `@alexend
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Documentation restructure.** The local **stdio** transport is now documented as the **primary** usage mode; the HTTP/Docker deployment moves to an **advanced** mode under `docs/`. The README focuses on the stdio flow and links out to the new `docs/` for the rest.
+- **Env var reconciliation in `server.json`.** The declared environment variables in `server.json` were reconciled with the actual names read by `src/config.ts` (`PROTON_BRIDGE_USER`, `PROTON_BRIDGE_PASS`, `PROTON_BRIDGE_HOST`, `PROTON_BRIDGE_IMAP_PORT`, `PROTON_BRIDGE_SMTP_PORT`), removing the previously documented but non-matching names.
+
+### Added
+
+- **`docs/bridge-core.md`** — full guide to the headless `protonmail-bridge-core` package (headless vs GUI AUR install, `--cli` login/2FA flow, obtaining the bridge password with `info`, IMAP/SMTP ports, keychain persistence via gnome-keyring/secret-service, and troubleshooting including `ss -ltn | grep 1143`, bootstrap WARN noise, and bridge-password reconciliation after re-login).
+- **`docs/local-stdio-secrets.md`** — the secure stdio configuration pattern: why `PROTON_BRIDGE_PASS` must not live in clear text in `mcp.json`, registering a wrapper script as the MCP `command`, just-in-time secret resolution by `pass://<share-id>/<item-id>/<campo>` pointer, clean stdout (logs to stderr), and ephemeral env-file via `mktemp` + `trap`. Includes a complete placeholder wrapper; references the template at `plugins/protonmail-mcp/scripts/protonmail-mcp-stdio.sh.example`.
+- **`docs/deployment-http-docker.md`** — the HTTP/Docker/Dokploy deployment content retired from the README (advanced mode): the two images (`Dockerfile` + `Dockerfile.bridge`), `docker-compose` with internal network + Traefik, HTTP env vars (`MCP_AUTH_TOKEN` via `openssl rand -hex 32`, `MCP_ALLOWED_ORIGINS`, `LOG_LEVEL`), the `NODE_ENV=production` refusal to start with an empty allowlist, one-off Bridge login inside the container, `/healthz` and `/mcp` verification, and registration as a Remote MCP Server in Claude Routines.
+- **Triage skill documentation** — documented the mail-triage skill that drives inbox review/cleanup through the MCP over the local Bridge IMAP.
+- **Installable Claude Code plugin** — the project is now packaged as an installable Claude Code plugin (`plugins/protonmail-mcp/`), bundling the stdio wrapper template and MCP registration.
+
+### Notes
+
+- Documentation + plugin packaging work only. **No package version change** — this remains `0.2.0`. No functional/runtime behavior change to the MCP server itself.
+
 ## [0.2.0] · 2026-05-18
 
 ### Changed
@@ -50,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - This release is metadata-only; no functional changes vs `0.1.0`.
-- HTTP transport (`/mcp` over Bearer token at `protonmail.alexendros.me`) is intentionally **not** declared in `server.json` `remotes[]` because the registry policy requires remote endpoints to be publicly accessible without authentication. Operator decides when (and whether) to expose an unauthenticated public HTTP endpoint.
+- HTTP transport (`/mcp` over Bearer token at the operator's domain) is intentionally **not** declared in `server.json` `remotes[]` because the registry policy requires remote endpoints to be publicly accessible without authentication. Operator decides when (and whether) to expose an unauthenticated public HTTP endpoint.
 - Old npm name `@alexendros/protonmail-mcp` remains deprecated since `0.1.0` — do not republish.
 
 ## [0.1.0] · 2026-05-01
