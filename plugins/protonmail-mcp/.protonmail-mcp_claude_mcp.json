@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "protonmail-mcp": {
+      "command": "npx",
+      "args": ["-y", "@alexendros/protonmail-mcp"],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "PROTON_BRIDGE_USER": "${user_config.PROTON_BRIDGE_USER}",
+        "PROTON_MAIL_FROM": "${user_config.PROTON_MAIL_FROM}",
+        "PROTON_BRIDGE_HOST": "${user_config.PROTON_BRIDGE_HOST}",
+        "PROTON_BRIDGE_IMAP_PORT": "${user_config.PROTON_BRIDGE_IMAP_PORT}",
+        "PROTON_BRIDGE_SMTP_PORT": "${user_config.PROTON_BRIDGE_SMTP_PORT}",
+        "PROTON_BRIDGE_TLS_INSECURE": "${user_config.PROTON_BRIDGE_TLS_INSECURE}"
+      }
+    }
+  }
+}

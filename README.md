@@ -1,15 +1,19 @@
 # Proton Mail MCP
 
 [![npm version](https://img.shields.io/npm/v/@alexendros/protonmail-mcp.svg)](https://www.npmjs.com/package/@alexendros/protonmail-mcp)
-[![CI](https://github.com/Iniciativas-Alexendros/protonmail-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-mcp/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/Iniciativas-Alexendros/protonmail-mcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-mcp/actions/workflows/codeql.yml)
+[![CI](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](./package.json)
 [![MCP SDK](https://img.shields.io/badge/%40modelcontextprotocol%2Fsdk-%5E1.19-blue.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
 
 Servidor **[MCP (Model Context Protocol)](https://modelcontextprotocol.io)** para **Proton Mail** vía Proton Mail Bridge. Expone la bandeja — lectura, búsqueda, envío, mover, etiquetar, borrar — a cualquier cliente MCP con tipado estricto, anotaciones de seguridad y doble transporte (`stdio` y `streamable HTTP`).
 
+Se instala de dos formas: como **plugin de Claude Code** (un comando, sin tocar `dist/`; ver [Instalación como plugin](#instalación-como-plugin-de-claude-code)) o como **servidor MCP autohospedado** (clon + build, o despliegue HTTP avanzado). El repo incluye además una **skill de triaje de correo** (ver [Skill de triaje](#skill-de-triaje-de-correo)) que clasifica el INBOX y aparta la basura comercial sin borrar nada.
+
 > La garantía E2E de Proton se preserva: el cifrado y descifrado ocurren en Bridge, una máquina que controlas tú. Ni los servidores de Anthropic ni terceros ven tu correo descifrado — sólo el agente al que tú autorizas.
+
+> **Modo de uso de referencia: local, `stdio`, on-demand.** El camino primario es el cliente local (Claude Code lanza el MCP por `stdio` cuando lo necesita, contra un Bridge en `127.0.0.1`). El despliegue HTTP/Docker existe y está documentado como **modo avanzado** en [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md), pero no es necesario para el uso normal.
 
 ---
 
@@ -32,17 +36,19 @@ Este repositorio también sirve como **muestra pública de craft**: tests automa
 
 ## Estado actual
 
-| Pieza | Estado |
-|---|---|
-| Smoke `stdio`: `initialize` + `tools/list` responden con las 13 tools | verificado |
-| Typecheck strict (`tsc --noEmit`) sobre todo `src/` y `tests/` | verde |
-| Suite Vitest: 4 archivos, **39 tests** (auth · config · smtp-helpers · http-transport) | verde |
-| Build `tsc` a `dist/` + smoke integrado en `npm run smoke` | verde |
-| Imagen Docker multi-stage para el MCP | construye |
-| Imagen extendida `Dockerfile.bridge` (libfido2, dbus, pass, libGL, credential helpers) | construye |
-| CI GitHub Actions (matrix Node 20/22, typecheck, test, build, smoke, `npm audit`, CodeQL) | configurado |
-| Release workflow a `ghcr.io/iniciativas-alexendros/protonmail-mcp` en push a `main` | configurado |
-| Despliegue Dokploy en `https://protonmail.alexendros.me/mcp` | en progreso |
+| Pieza                                                                                             | Estado                                                                          |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Smoke `stdio`: `initialize` + `tools/list` responden con las 13 tools                             | verificado                                                                      |
+| Cliente local on-demand (Claude Code lanza el MCP por `stdio` contra Bridge `127.0.0.1`)          | **modo primario, en uso**                                                       |
+| Plugin de Claude Code (marketplace + skill de triaje instalables con un comando)                  | disponible                                                                      |
+| Skill de triaje de correo (clasifica INBOX, aparta basura comercial, nunca borra)                 | en uso                                                                          |
+| Typecheck strict (`tsc --noEmit`) sobre todo `src/` y `tests/`                                    | verde                                                                           |
+| Suite Vitest (auth · config · smtp-helpers · http-transport)                                      | verde                                                                           |
+| Build `tsc` a `dist/` + smoke integrado en `npm run smoke`                                        | verde                                                                           |
+| Imagen Docker multi-stage + `Dockerfile.bridge` (despliegue HTTP avanzado)                        | construye                                                                       |
+| CI GitHub Actions (matrix Node 20/22, typecheck, test, build, smoke, `npm audit`, CodeQL)         | configurado                                                                     |
+| Release workflow a `ghcr.io/iniciativas-alexendros/plugin-protonmail-claudecode` en push a `main` | configurado                                                                     |
+| Despliegue HTTP/Bearer público (Dokploy)                                                          | **retirado** — uso actual local-`stdio`; HTTP queda como modo avanzado opcional |
 
 ---
 
@@ -108,91 +114,105 @@ Este repositorio también sirve como **muestra pública de craft**: tests automa
 
 Todas las tools de lectura aceptan `response_format: "markdown" | "json"`.
 
-| Tool | Tipo | Descripción |
-|---|---|---|
-| `proton_list_folders` | read | Lista mailboxes (INBOX, Sent, Trash, labels, carpetas custom) |
-| `proton_create_folder` | write | Crea un mailbox nuevo |
-| `proton_mailbox_status` | read | Contadores rápidos: total / unseen / recent |
-| `proton_list_emails` | read | Lista paginada de mensajes recientes (UID, from, subject, date, flags) |
-| `proton_search_emails` | read | Búsqueda con filtros combinables (`query`, `since`/`before`, `unseen_only`, `from_address`, `to_address`, `fields`) |
-| `proton_get_email` | read | Mensaje completo: headers, cuerpo texto/HTML, metadata de adjuntos |
-| `proton_get_attachment` | read | Descarga un adjunto en base64. `max_bytes` default 10 MB (hard cap 50 MB) con `truncated=true` explícito |
-| `proton_send_email` | write | Envía texto/HTML + adjuntos. `from` fijo al configurado (no spoofing) |
-| `proton_reply_email` | write | Responde preservando threading (`In-Reply-To` + `References`), con `reply_all` opcional y quote |
-| `proton_forward_email` | write | Reenvía opcionalmente con adjuntos originales |
-| `proton_flag_email` | write (idempotent) | `read` / `unread` / `starred` / `unstarred` / flags custom |
-| `proton_move_email` | write | Mueve entre mailboxes por UID |
-| `proton_delete_email` | **destructive** | Modo `trash` (default, reversible) o `permanent` (expunge inmediato) |
+| Tool                    | Tipo               | Descripción                                                                                                         |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `proton_list_folders`   | read               | Lista mailboxes (INBOX, Sent, Trash, labels, carpetas custom)                                                       |
+| `proton_create_folder`  | write              | Crea un mailbox nuevo                                                                                               |
+| `proton_mailbox_status` | read               | Contadores rápidos: total / unseen / recent                                                                         |
+| `proton_list_emails`    | read               | Lista paginada de mensajes recientes (UID, from, subject, date, flags)                                              |
+| `proton_search_emails`  | read               | Búsqueda con filtros combinables (`query`, `since`/`before`, `unseen_only`, `from_address`, `to_address`, `fields`) |
+| `proton_get_email`      | read               | Mensaje completo: headers, cuerpo texto/HTML, metadata de adjuntos                                                  |
+| `proton_get_attachment` | read               | Descarga un adjunto en base64. `max_bytes` default 10 MB (hard cap 50 MB) con `truncated=true` explícito            |
+| `proton_send_email`     | write              | Envía texto/HTML + adjuntos. `from` fijo al configurado (no spoofing)                                               |
+| `proton_reply_email`    | write              | Responde preservando threading (`In-Reply-To` + `References`), con `reply_all` opcional y quote                     |
+| `proton_forward_email`  | write              | Reenvía opcionalmente con adjuntos originales                                                                       |
+| `proton_flag_email`     | write (idempotent) | `read` / `unread` / `starred` / `unstarred` / flags custom                                                          |
+| `proton_move_email`     | write              | Mueve entre mailboxes por UID                                                                                       |
+| `proton_delete_email`   | **destructive**    | Modo `trash` (default, reversible) o `permanent` (expunge inmediato)                                                |
 
 Cada tool se registra con `annotations` del SDK — `readOnlyHint`, `idempotentHint`, `destructiveHint`, `openWorldHint` — para que el modelo pueda razonar sobre el efecto antes de invocarla.
 
 ---
 
-## Tres caminos de integración
+## Caminos de integración
 
-### 1 · Claude Code CLI (local, stdio)
+El orden refleja la prioridad real de uso: **el cliente local por `stdio` es el camino primario**; el HTTP queda como modo avanzado.
 
-Ideal para el día a día en el workstation. Bridge corre en la máquina; el MCP se lanza vía stdio cuando Claude Code lo necesita.
+### 1 · Plugin de Claude Code (recomendado)
+
+La vía más corta: instala el MCP **y** la skill de triaje de una vez, sin clonar ni compilar. Ver [Instalación como plugin](#instalación-como-plugin-de-claude-code).
+
+```text
+/plugin marketplace add Iniciativas-Alexendros/plugin-protonmail-claudecode
+/plugin install protonmail-mcp@protonmail-mcp
+```
+
+### 2 · Claude Code CLI (local, `stdio`) — manual
+
+Para registrar el MCP a mano sin el plugin. Bridge corre en la máquina; el MCP se lanza por `stdio` cuando Claude Code lo necesita.
 
 ```bash
 claude mcp add --transport stdio proton-mail --scope user \
-  --env PROTON_BRIDGE_USER=tu@proton.me \
-  --env PROTON_BRIDGE_PASS=tu-bridge-password \
-  --env PROTON_MAIL_FROM=tu@proton.me \
+  --env PROTON_BRIDGE_USER=you@proton.me \
+  --env PROTON_BRIDGE_PASS=your-bridge-password \
+  --env PROTON_MAIL_FROM=you@proton.me \
   --env PROTON_BRIDGE_TLS_INSECURE=true \
   --env MCP_TRANSPORT=stdio \
   -- node /ruta/absoluta/a/protonmail-mcp/dist/index.js
 ```
 
-Dentro de cualquier sesión de Claude Code, el comando `/mcp` muestra `proton-mail: connected` y las 13 tools. A partir de ahí, lenguaje natural: *"resume mis correos no leídos de la última semana por tema"*.
+> **Bridge password en claro en el registro.** El ejemplo de arriba deja `PROTON_BRIDGE_PASS` literal en el `mcp.json` del cliente. Para evitarlo, registra un **wrapper `stdio`** que resuelva el bridge password JIT desde tu gestor de secretos (cero secreto en disco). Patrón completo en [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md).
 
-### 2 · Claude Routines (claude.ai, HTTP)
+Dentro de cualquier sesión de Claude Code, `/mcp` muestra `proton-mail: connected` y las 13 tools. A partir de ahí, lenguaje natural: _"resume mis correos no leídos de la última semana por tema"_.
 
-Routines necesita un endpoint HTTPS público. Tras desplegar en Dokploy (abajo), se añade como **Remote MCP Server**:
+### 3 · HTTP remoto (Routines, backend propio) — modo avanzado
 
-- URL: `https://tu-dominio.com/mcp`
-- Authorization: `Bearer <MCP_AUTH_TOKEN>`
-
-Y se programan rutinas declarativas:
-
-> *"Cada lunes a las 9:00, busca en INBOX correos no leídos de los últimos 7 días, clasifícalos por tema (software / administraciones / finanzas / personal / legal), y envíame un resumen markdown a mi propia cuenta."*
-
-### 3 · Backend propio (HTTP, SDK oficial o fetch)
-
-El servidor habla JSON-RPC estándar. El ejemplo oficial usa `@modelcontextprotocol/sdk`:
-
-```ts
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-
-const transport = new StreamableHTTPClientTransport(
-  new URL(process.env.PROTON_MCP_URL!),
-  { requestInit: { headers: { Authorization: `Bearer ${process.env.PROTON_MCP_TOKEN!}` } } },
-);
-const client = new Client({ name: "mi-backend", version: "1.0.0" });
-await client.connect(transport);
-
-const { content } = await client.callTool({
-  name: "proton_search_emails",
-  arguments: { query: "factura", unseen_only: true, limit: 10 },
-});
-```
-
-Para ahorrarte esa dependencia, este repo incluye también un **cliente fetch de ~130 líneas** en `extras/` (ver [Integración en Next.js](#integración-en-nextjs)).
+El servidor también habla `streamable HTTP` con bearer + allowlist de origen, para Claude Routines o un backend propio. Es un despliegue autohospedado completo (Docker/Dokploy, cert TLS, token), documentado aparte: ver [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) y la [Integración en Next.js](#integración-en-nextjs). No es necesario para el uso local.
 
 ---
 
 ## Quickstart local
 
-Prerrequisitos: **Node ≥ 20**, **Proton Mail Bridge** corriendo en el workstation (GUI o distrobox), y el *bridge password* a mano (no es tu password Proton — lo muestra Bridge en **Account → Mailbox password**).
+Prerrequisitos: **Node ≥ 20**, **Proton Mail Bridge** corriendo en el workstation, y el _bridge password_ a mano (no es tu password Proton — lo muestra Bridge bajo `info`).
+
+### El Bridge: `protonmail-bridge-core` (CLI headless)
+
+El MCP no habla con Proton directamente: habla IMAP/SMTP en `127.0.0.1` contra **Proton Mail Bridge**, que hace la criptografía E2E en tu máquina. Para un workstation sin entorno gráfico (o para no arrastrar la GUI), el paquete headless es **`protonmail-bridge-core`** — el binario CLI `protonmail-bridge-core`, distinto del paquete GUI (`proton-mail-bin` en el AUR).
 
 ```bash
-git clone https://github.com/Iniciativas-Alexendros/protonmail-mcp.git
-cd protonmail-mcp
+# Arranca el Bridge en modo CLI (interactivo)
+protonmail-bridge-core --cli
+
+# Dentro de la shell del Bridge:
+>>> login      # introduce cuenta Proton + contraseña + 2FA (lo haces tú)
+>>> info       # muestra el bridge password generado (≠ tu contraseña Proton)
+>>> exit
+```
+
+Tras `login`, Bridge expone:
+
+- **IMAP** en `127.0.0.1:1143`
+- **SMTP** en `127.0.0.1:1025`
+
+El _bridge password_ que muestra `info` es una credencial **generada por Bridge**, propia de IMAP/SMTP, que **cambia en cada re-login** — no es tu contraseña de cuenta Proton. Es la que va en `PROTON_BRIDGE_PASS`. El vault de Bridge persiste en el keychain del sistema (p. ej. gnome-keyring vía secret-service en Linux), así que los siguientes arranques no piden 2FA.
+
+Verifica que el puerto está vivo antes de usar el MCP:
+
+```bash
+ss -ltn | grep -E '127.0.0.1:1143'   # debe listar el puerto IMAP
+```
+
+> Los WARN de arranque del Bridge (cache de unleash, vault key) son ruido de bootstrap, no fallos. Detalle y troubleshooting en [`docs/bridge-core.md`](./docs/bridge-core.md).
+
+### Build y smoke del MCP
+
+```bash
+git clone https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode.git
+cd plugin-protonmail-claudecode
 npm install
 npm run build
-npm test        # 39 tests verdes
-npm run smoke   # verifica stdio: initialize + tools/list
+npm test         # suite Vitest verde
+npm run smoke    # verifica stdio: initialize + tools/list
 ```
 
 Crea `.env` desde el template:
@@ -205,9 +225,9 @@ cp .env.example .env
 Arranca en modo stdio contra Bridge local:
 
 ```bash
-PROTON_BRIDGE_USER=tu@proton.me \
-PROTON_BRIDGE_PASS=xxx \
-PROTON_MAIL_FROM=tu@proton.me \
+PROTON_BRIDGE_USER=you@proton.me \
+PROTON_BRIDGE_PASS=your-bridge-password \
+PROTON_MAIL_FROM=you@proton.me \
 PROTON_BRIDGE_TLS_INSECURE=true \
 MCP_TRANSPORT=stdio \
 node dist/index.js
@@ -222,61 +242,47 @@ npm run inspect
 
 ---
 
-## Producción: Docker + Dokploy
+## Skill de triaje de correo
 
-El repo incluye todo para un despliegue autohospedado con dos contenedores: **bridge** (Proton Mail Bridge headless) y **mcp** (este servidor en HTTP). Traefik emite un cert Let's Encrypt automáticamente.
+El repo incluye una **skill de Claude Code** (`triaje-correo`) que opera sobre las tools `proton_*` para revisar el INBOX, **resumir lo relevante** y **apartar la basura comercial** moviéndola a `Folders/Marketing-Promo`. Se instala con el plugin (abajo); la fuente vive en [`plugins/protonmail-mcp/skills/triaje-correo/SKILL.md`](./plugins/protonmail-mcp/skills/triaje-correo/SKILL.md).
 
-### 1. Variables en Dokploy
+**Qué hace:** clasifica cada correo del INBOX en `RELEVANTE` / `COMERCIAL` / `DUDOSO` con señales explícitas (`List-Unsubscribe`, remitente `no-reply@`/`newsletter@`, patrones promo en el asunto, plataformas de email marketing), resume los relevantes y propone mover los comerciales.
 
-```env
-PROTON_BRIDGE_USER=tu@proton.me
-PROTON_BRIDGE_PASS=<se rellena tras login inicial>
-PROTON_MAIL_FROM=tu@proton.me
-MCP_AUTH_TOKEN=<openssl rand -hex 32>
-MCP_ALLOWED_ORIGINS=https://claude.ai,https://tu-dashboard.com
-LOG_LEVEL=info
+**Garantías de seguridad (por diseño):**
+
+- **Dry-run obligatorio primero.** No mueve nada hasta que tú das OK explícito; en dry-run solo reporta qué movería.
+- **Nunca borra.** Usa exclusivamente `proton_move_email`; `proton_delete_email` está **prohibida** en este flujo. Mover es reversible (arrastras de vuelta).
+- **Cuadre pre/post.** Tras aplicar, verifica `movidos + restantes_INBOX == total_inicial`; si no cuadra, para y reporta.
+- **Cero falsos positivos sobre transaccional/personal.** Ante la duda, el correo se queda en INBOX. Facturas, OTP, alertas de seguridad y banca nunca se mueven, aunque traigan `List-Unsubscribe`.
+
+**Taxonomía de carpetas** (configurable): destino de basura `Folders/Marketing-Promo`; carpetas tratadas como relevantes por naturaleza `Folders/Admin-Estado`, `Banca-Pagos`, `Abogados`, `Salud`, etc.
+
+**Uso:** en una sesión con el MCP conectado, lenguaje natural — _"revisa el correo"_, _"limpia la basura comercial"_, _"qué hay en el inbox"_.
+
+---
+
+## Instalación como plugin de Claude Code
+
+La forma recomendada de poner en marcha el MCP **y** la skill de triaje a la vez, de forma global, sin clonar ni compilar.
+
+```text
+/plugin marketplace add Iniciativas-Alexendros/plugin-protonmail-claudecode
+/plugin install protonmail-mcp@protonmail-mcp
 ```
 
-Todas las variables se validan en arranque con Zod. En `NODE_ENV=production`, el servidor se niega a arrancar si `MCP_ALLOWED_ORIGINS` está vacío (evita exposición accidental a cualquier origen).
+El instalador pide los valores de `userConfig` (tu dirección Proton, `from`, host/puertos del Bridge). El MCP se registra en modo `stdio` lanzando `npx -y @alexendros/protonmail-mcp`, así que no necesitas tener el repo clonado.
 
-### 2. Login one-off al Bridge headless
+**Puesta en marcha tras instalar:**
 
-La primera vez hay que iniciar sesión interactivamente en Bridge (TTY):
+1. **Arranca el Bridge** (`protonmail-bridge-core --cli` → `login`), como en el [Quickstart](#el-bridge-protonmail-bridge-core-cli-headless). Verifica el puerto: `ss -ltn | grep 1143`.
+2. **Aporta el bridge password de forma segura.** El plugin no almacena el `PROTON_BRIDGE_PASS`: lo aportas tú por entorno, o mejor con un **wrapper que lo resuelva JIT** desde tu gestor de secretos. Plantilla en [`plugins/protonmail-mcp/scripts/protonmail-mcp-stdio.sh.example`](./plugins/protonmail-mcp/scripts/protonmail-mcp-stdio.sh.example); patrón completo en [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md).
+3. **Reinicia la sesión** de Claude Code para que registre el MCP, y comprueba con `/mcp` que `protonmail-mcp` está `connected` con las 13 tools.
 
-```bash
-ssh tu-vps
-docker run --rm -it \
-  -v <volumen-bridge-data>:/root \
-  --entrypoint /bin/bash protonmail-mcp-bridge:latest \
-  -c "/protonmail/proton-bridge --cli"
-# dentro:
->>> login      # username/pass/2FA
->>> info       # anota el bridge password mostrado
->>> exit
-```
+---
 
-Pega ese bridge password en `PROTON_BRIDGE_PASS` y redeploy. El volumen persiste el vault: siguientes arranques son automáticos.
+## HTTP remoto (modo avanzado)
 
-### 3. Verificación
-
-```bash
-curl https://tu-dominio.com/healthz
-# {"ok":true,"version":"0.1.0","sessions":0}
-
-curl -X POST https://tu-dominio.com/mcp \
-  -H "Authorization: Bearer $MCP_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
-```
-
-### 4. Registrar en Claude Code remoto
-
-```bash
-claude mcp add --transport http proton-mail-remote --scope user \
-  https://tu-dominio.com/mcp \
-  -H "Authorization: Bearer <MCP_AUTH_TOKEN>"
-```
+El despliegue autohospedado por HTTP (Docker/Dokploy, bearer timing-safe, allowlist de origen, cert TLS) **no es necesario para el uso local** y se documenta aparte: ver [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md). Cubre las variables (`MCP_AUTH_TOKEN`, `MCP_ALLOWED_ORIGINS`), el login one-off al Bridge en contenedor, la verificación con `curl /healthz` + `curl /mcp`, y el registro como Remote MCP Server en Claude Routines.
 
 ---
 
@@ -303,7 +309,7 @@ Si tu dashboard es un Next.js (por ejemplo, el [Developer Command Center](https:
 ```ts
 // src/lib/mcp/proton.ts (extracto)
 export async function fetchUnreadSummary(opts: { limit?: number } = {}) {
-  const mcp = await connectProtonMcp();   // initialize + session id
+  const mcp = await connectProtonMcp(); // initialize + session id
   try {
     const call = await mcp.callTool("proton_search_emails", {
       mailbox: "INBOX",
@@ -318,11 +324,14 @@ export async function fetchUnreadSummary(opts: { limit?: number } = {}) {
 }
 ```
 
-Y una acción sobre el patrón *actions dispatcher* (Zod + auth + audit log append-only):
+Y una acción sobre el patrón _actions dispatcher_ (Zod + auth + audit log append-only):
 
 ```ts
 // src/lib/actions/handlers.ts
-export async function mailUnreadSummary(p: { mailbox?: string; limit?: number }) {
+export async function mailUnreadSummary(p: {
+  mailbox?: string;
+  limit?: number;
+}) {
   const summary = await fetchUnreadSummary({ limit: p.limit });
   return { providerRef: `mailbox:${summary.mailbox}`, result: summary };
 }
@@ -336,7 +345,7 @@ Desde la UI, un `<ActionButton action="mail/unread-summary" />` dispara la llama
 
 ```bash
 npm run typecheck    # tsc --noEmit, strict mode
-npm test             # vitest run, 39 tests en 4 suites
+npm test             # vitest run, 4 suites (auth · config · smtp-helpers · http-transport)
 npm run smoke        # initialize + tools/list stdio
 ```
 
@@ -353,18 +362,18 @@ npm run smoke        # initialize + tools/list stdio
 2. `audit`: `npm audit --audit-level=high`
 3. `docker-build`: construye la imagen sin push (smoke)
 4. `codeql`: análisis SAST JavaScript/TypeScript en push a main y semanal
-5. `release` (en push a main): docker build + push a `ghcr.io/iniciativas-alexendros/protonmail-mcp:{sha,latest}`
+5. `release` (en push a main): docker build + push a `ghcr.io/iniciativas-alexendros/plugin-protonmail-claudecode:{sha,latest}`
 
 ---
 
 ## Casos de uso reales
 
-| Contexto | Flujo | Ganancia |
-|---|---|---|
-| **Triaje semanal** | Routine cada lunes 09:00 → clasifica no-leídos por tema → envía digest | 30 min → 0 min humanos |
-| **Leads comerciales** | Routine cada 30 min → busca asuntos con "consulta" → extrae datos → crea lead en CRM | Menos fricción, más conversión |
-| **Administraciones** | Routine diaria → detecta comunicaciones BOE/AEAT/AEPD → extrae plazos → tarea en Notion | Cero plazos perdidos |
-| **Post-venta Stripe** | Webhook Stripe → route handler llama `proton_send_email` con plantilla + PDF | Email automatizado con un solo servicio |
+| Contexto              | Flujo                                                                                   | Ganancia                                |
+| --------------------- | --------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Triaje semanal**    | Routine cada lunes 09:00 → clasifica no-leídos por tema → envía digest                  | 30 min → 0 min humanos                  |
+| **Leads comerciales** | Routine cada 30 min → busca asuntos con "consulta" → extrae datos → crea lead en CRM    | Menos fricción, más conversión          |
+| **Administraciones**  | Routine diaria → detecta comunicaciones BOE/AEAT/AEPD → extrae plazos → tarea en Notion | Cero plazos perdidos                    |
+| **Post-venta Stripe** | Webhook Stripe → route handler llama `proton_send_email` con plantilla + PDF            | Email automatizado con un solo servicio |
 
 Coste marginal de cada flujo nuevo una vez desplegado: **cero**.
 
@@ -372,19 +381,19 @@ Coste marginal de cada flujo nuevo una vez desplegado: **cero**.
 
 ## Stack técnico
 
-| Pieza | Versión | Por qué |
-|---|---|---|
-| TypeScript | 5.7 | `strict` + `NodeNext` para catch-at-compile |
-| Node | ≥20 | Fetch nativo, `node:crypto` estable, rendimiento en `imapflow` |
-| `@modelcontextprotocol/sdk` | ^1.19 | SDK oficial; per-session `StreamableHTTPServerTransport` |
-| `imapflow` | ^1.0 | IMAP moderno, async/await, lock de mailbox granular |
-| `nodemailer` | ^6.9 | Estándar de facto para SMTP en Node, con pool |
-| `mailparser` | ^3.7 | Decodifica MIME + adjuntos a estructura tipada |
-| `zod` | ^3.23 | Validación de schemas a nivel tool + env vars |
-| `express` | ^4.21 | Middleware para auth/rate-limit/origin allowlist |
-| `express-rate-limit` | ^7.4 | 120 req/min por token |
-| `vitest` | ^2.1 | Runner rápido con TypeScript nativo |
-| `supertest` | ^7.0 | Tests del transport HTTP sin puerto real |
+| Pieza                       | Versión | Por qué                                                        |
+| --------------------------- | ------- | -------------------------------------------------------------- |
+| TypeScript                  | ^6.0    | `strict` + `NodeNext` para catch-at-compile                    |
+| Node                        | ≥20     | Fetch nativo, `node:crypto` estable, rendimiento en `imapflow` |
+| `@modelcontextprotocol/sdk` | ^1.19   | SDK oficial; per-session `StreamableHTTPServerTransport`       |
+| `imapflow`                  | ^1.0    | IMAP moderno, async/await, lock de mailbox granular            |
+| `nodemailer`                | ^8.0    | Estándar de facto para SMTP en Node, con pool                  |
+| `mailparser`                | ^3.7    | Decodifica MIME + adjuntos a estructura tipada                 |
+| `zod`                       | ^4.3    | Validación de schemas a nivel tool + env vars                  |
+| `express`                   | ^5.2    | Middleware para auth/rate-limit/origin allowlist               |
+| `express-rate-limit`        | ^8.4    | 120 req/min por token                                          |
+| `vitest`                    | ^4.1    | Runner rápido con TypeScript nativo                            |
+| `supertest`                 | ^7.0    | Tests del transport HTTP sin puerto real                       |
 
 ---
 
@@ -413,6 +422,21 @@ scripts/
 ├── ci.yml        lint/typecheck/test/build/smoke + npm audit + docker build
 ├── release.yml   push a ghcr.io en main y tags semver
 └── codeql.yml    SAST JavaScript/TypeScript
+
+.claude-plugin/
+└── marketplace.json   colección de marketplace (un plugin: protonmail-mcp)
+
+plugins/protonmail-mcp/
+├── .claude-plugin/plugin.json          descriptor: userConfig + ref al MCP stdio
+├── .protonmail-mcp_claude_mcp.json     MCP stdio (npx -y @alexendros/protonmail-mcp)
+├── skills/triaje-correo/SKILL.md       skill de triaje de correo
+└── scripts/
+    └── protonmail-mcp-stdio.sh.example wrapper con resolución JIT del bridge pass
+
+docs/
+├── bridge-core.md              Bridge headless protonmail-bridge-core (CLI, keychain)
+├── local-stdio-secrets.md      patrón wrapper stdio + secreto JIT (cero secreto en disco)
+└── deployment-http-docker.md   modo avanzado HTTP/Docker/Dokploy
 
 Dockerfile          imagen mcp: multi-stage node:20-alpine
 Dockerfile.bridge   imagen bridge: extiende shenxn/protonmail-bridge:build con libfido2,

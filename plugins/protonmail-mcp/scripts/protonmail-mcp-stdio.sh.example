@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# protonmail-mcp stdio wrapper (EXAMPLE / TEMPLATE)
+#
+# Launches the Proton Mail MCP server over STDIO with the Proton Bridge
+# connection settings, resolving the Bridge password from a secrets manager at
+# runtime so it never lands in the repo, in env files committed to git, or in
+# your shell history.
+#
+# Copy this file (drop the .example suffix), fill in YOUR placeholders, mark it
+# executable (chmod +x), and register its path as the stdio command in your MCP
+# client (see docs/local-stdio-secrets.md).
+#
+# SECURITY: every value below is a PLACEHOLDER. Replace them with your own.
+# Never commit real addresses, share/item ids, or secrets.
+# -----------------------------------------------------------------------------
+set -euo pipefail
+
+# --- Bridge connection (non-secret) ------------------------------------------
+# Your Proton address used as the Bridge IMAP/SMTP user.
+export PROTON_BRIDGE_USER="you@proton.me"
+# Optional From header; defaults to PROTON_BRIDGE_USER if unset.
+export PROTON_MAIL_FROM="you@proton.me"
+# Proton Bridge listens on loopback by default.
+export PROTON_BRIDGE_HOST="127.0.0.1"
+export PROTON_BRIDGE_IMAP_PORT="1143"
+export PROTON_BRIDGE_SMTP_PORT="1025"
+# Accept Bridge's self-signed cert on the local connection.
+export PROTON_BRIDGE_TLS_INSECURE="true"
+# This server speaks MCP over stdio.
+export MCP_TRANSPORT="stdio"
+
+# --- Resolve the Bridge password from a secrets manager ----------------------
+# The Bridge password is NEVER stored here. It is fetched just-in-time from a
+# secrets manager via a pass:// pointer. Replace `pass-cli` below with your own
+# secrets manager CLI, and the pointer with your own share/item/field.
+#
+#   pass://<share-id>/<item-id>/<field>
+#
+# All diagnostic output goes to stderr (>&2) so it never corrupts the stdio
+# JSON-RPC stream that the MCP client reads on stdout.
+echo "protonmail-mcp wrapper: resolving Bridge password from secrets manager..." >&2
+PROTON_BRIDGE_PASS="$(pass-cli read 'pass://<share-id>/<item-id>/<field>')"
+export PROTON_BRIDGE_PASS
+
+# --- Ephemeral env file (auto-removed on exit) -------------------------------
+# Write the resolved env to a short-lived file with restrictive perms, and make
+# sure it is shredded when this process exits (success, error, or signal).
+ENV_FILE="$(mktemp)"
+trap 'rm -f "$ENV_FILE"' EXIT INT TERM
+chmod 600 "$ENV_FILE"
+{
+  echo "PROTON_BRIDGE_USER=${PROTON_BRIDGE_USER}"
+  echo "PROTON_MAIL_FROM=${PROTON_MAIL_FROM}"
+  echo "PROTON_BRIDGE_HOST=${PROTON_BRIDGE_HOST}"
+  echo "PROTON_BRIDGE_IMAP_PORT=${PROTON_BRIDGE_IMAP_PORT}"
+  echo "PROTON_BRIDGE_SMTP_PORT=${PROTON_BRIDGE_SMTP_PORT}"
+  echo "PROTON_BRIDGE_TLS_INSECURE=${PROTON_BRIDGE_TLS_INSECURE}"
+  echo "MCP_TRANSPORT=${MCP_TRANSPORT}"
+  echo "PROTON_BRIDGE_PASS=${PROTON_BRIDGE_PASS}"
+} >"$ENV_FILE"
+
+echo "protonmail-mcp wrapper: launching MCP server over stdio..." >&2
+
+# --- Launch the server -------------------------------------------------------
+# Run under the secrets manager so the env file is injected into the child and
+# the parent shell never keeps the password resident. Replace `pass-cli` with
+# your own secrets manager CLI.
+#
+# Published npm package (default):
+exec pass-cli run --env-file "$ENV_FILE" -- npx -y @alexendros/protonmail-mcp
+#
+# Cloned-from-source alternative (use instead of the line above if you run a
+# local checkout): build first, then:
+#   exec pass-cli run --env-file "$ENV_FILE" -- node dist/index.js

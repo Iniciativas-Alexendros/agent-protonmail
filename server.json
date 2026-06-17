@@ -3,7 +3,7 @@
   "name": "io.github.Alexendros/protonmail-mcp",
   "description": "Proton Mail MCP via Bridge (IMAP/SMTP) · 13 tools · dual transport stdio + HTTP.",
   "repository": {
-    "url": "https://github.com/Iniciativas-Alexendros/protonmail-mcp",
+    "url": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode",
     "source": "github"
   },
   "version": "0.2.0",
@@ -17,6 +17,27 @@
       },
       "environmentVariables": [
         {
+          "name": "PROTON_BRIDGE_USER",
+          "description": "Bridge username (your Proton Mail address).",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "PROTON_BRIDGE_PASS",
+          "description": "Bridge-generated app password (NOT your Proton account password). Shown by `protonmail-bridge-core --cli` under `info`.",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "PROTON_MAIL_FROM",
+          "description": "From address for outgoing mail. Defaults to PROTON_BRIDGE_USER if unset; set explicitly when the account uses an alias.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
           "name": "PROTON_BRIDGE_HOST",
           "description": "Hostname or IP of the Proton Mail Bridge (default: 127.0.0.1 for local, or container hostname in compose).",
           "isRequired": false,
@@ -24,32 +45,32 @@
           "isSecret": false
         },
         {
-          "name": "PROTON_IMAP_PORT",
+          "name": "PROTON_BRIDGE_IMAP_PORT",
           "description": "IMAP port exposed by Proton Mail Bridge (default: 1143).",
           "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
-          "name": "PROTON_SMTP_PORT",
+          "name": "PROTON_BRIDGE_SMTP_PORT",
           "description": "SMTP port exposed by Proton Mail Bridge (default: 1025).",
           "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
-          "name": "PROTON_USERNAME",
-          "description": "Bridge username (your Proton Mail address).",
-          "isRequired": true,
+          "name": "PROTON_BRIDGE_TLS_INSECURE",
+          "description": "Accept Bridge's self-signed localhost cert without validation (default: true). Set to false only if you import Bridge's CA into the trust store.",
+          "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
-          "name": "PROTON_PASSWORD",
-          "description": "Bridge-generated app password (NOT your Proton account password).",
-          "isRequired": true,
+          "name": "MCP_TRANSPORT",
+          "description": "Transport mode: stdio (default, local client) or http (advanced remote deployment).",
+          "isRequired": false,
           "format": "string",
-          "isSecret": true
+          "isSecret": false
         }
       ]
     }

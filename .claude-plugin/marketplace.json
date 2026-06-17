@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "protonmail-mcp",
+  "metadata": {
+    "description": "Marketplace for the Proton Mail MCP server plugin and email triage skill"
+  },
+  "owner": {
+    "name": "Alexendros"
+  },
+  "plugins": [
+    {
+      "name": "protonmail-mcp",
+      "description": "Proton Mail MCP server (13 tools via Bridge IMAP/SMTP) + email triage skill for Claude Code.",
+      "author": {
+        "name": "Alexendros"
+      },
+      "source": "./plugins/protonmail-mcp"
+    }
+  ]
+}

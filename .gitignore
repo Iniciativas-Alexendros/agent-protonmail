@@ -6,3 +6,6 @@ dist/
 .DS_Store
 .claude
 
+
+# Claude Code settings personales (no versionar)
+.claude/settings.local.json
