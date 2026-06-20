@@ -1,6 +1,6 @@
 {
   "name": "protonmail-mcp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Proton Mail MCP server (13 tools via Bridge IMAP/SMTP) + email triage skill for Claude Code.",
   "author": {
     "name": "Alexendros"

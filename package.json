@@ -1,6 +1,6 @@
 {
   "name": "@alexendros/protonmail-mcp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "mcpName": "io.github.Alexendros/protonmail-mcp",
   "description": "MCP server for Proton Mail via Proton Mail Bridge (IMAP/SMTP). Dual transport: stdio + streamable HTTP.",
   "license": "MIT",

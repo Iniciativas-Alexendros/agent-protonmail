@@ -134,3 +134,42 @@ jobs:
           notes: |
             Registry: ghcr.io/${{ github.repository }}.
             `latest` se actualiza en push a main O tag estable (no pre-release).
+
+  # ────────────────────────────────────────────────────────────────────
+  # Publicación a npm · SOLO en tags vX.Y.Z. Cierra el hueco histórico por el
+  # que npm se quedó en 0.1.0 mientras el repo avanzaba: el plugin y cualquier
+  # MCP por `npx -y @alexendros/protonmail-mcp` (Claude Code, OpenCode, …)
+  # tiraban de código obsoleto. Provenance vía OIDC (id-token) + NPM_TOKEN.
+  # Requiere el secret NPM_TOKEN en la org/repo (automation token de npm).
+  # ────────────────────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish to npm
+    needs: [gate-semver]
+    if: |
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.gate-semver.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} != package.json ${PKG_VERSION}"; exit 1
+          fi
+      - name: Publish (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

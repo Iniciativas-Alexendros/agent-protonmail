@@ -6,12 +6,12 @@
     "url": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode",
     "source": "github"
   },
-  "version": "0.3.1",
+  "version": "0.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@alexendros/protonmail-mcp",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
@@ -61,6 +61,13 @@
         {
           "name": "PROTON_BRIDGE_TLS_INSECURE",
           "description": "Accept Bridge's self-signed localhost cert without validation (default: true). Set to false only if you import Bridge's CA into the trust store.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "PROTON_BRIDGE_SMTP_SECURITY",
+          "description": "SMTP TLS strategy: starttls (default, matches Proton Bridge), implicit (SMTPS/secure port), or plain (no TLS, only for trusted test servers like GreenMail). Leave unset for Bridge.",
           "isRequired": false,
           "format": "string",
           "isSecret": false

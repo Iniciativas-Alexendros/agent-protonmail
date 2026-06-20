@@ -5,6 +5,26 @@ All notable changes to `@alexendros/protonmail-mcp` (renamed back from `@alexend
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-20
+
+### Fixed
+
+- **Version single-source.** The server version was hardcoded in three places that had drifted (`package.json` 0.3.1, `src/server.ts` "0.3.0", `src/http.ts` `/healthz` "0.2.0"). It is now derived once from `package.json` at runtime via `src/version.ts`.
+- **Trash auto-detection in `proton_delete_email`.** `mode=trash` now resolves the mailbox flagged `\Trash` instead of assuming the literal English "Trash", so it works on accounts whose trash is `Papelera`/`Corbeille`/etc. `trash_path` is now an optional override.
+- **ISO date validation in `proton_search_emails`.** `since`/`before` are validated as parseable dates (Zod refine) — a malformed date returns a clear schema error instead of a cryptic IMAP failure.
+- **Actionable IMAP connection errors.** Connection failures are now classified (Bridge not running / bad credentials / timeout) with a remediation hint, preserving the original error as `cause`.
+
+### Added
+
+- **`PROTON_BRIDGE_SMTP_SECURITY`** env (`starttls` default | `implicit` | `plain`). The default preserves Bridge's STARTTLS behavior; the other modes broaden SMTP compatibility (and enable the GreenMail E2E suite).
+- **Real E2E test suite (`npm run test:e2e`)** against GreenMail (IMAP/SMTP) exercising the full send → read → flag → move → delete cycle through the real clients — no mocks. Runs in CI as a service container; `scripts/e2e-greenmail.sh` runs it locally.
+- **Generic MCP client docs.** README now documents a standard `mcpServers` config block so non-Claude clients (OpenCode, custom SDK backends) can consume the server directly.
+- **`npm publish` in CI.** The release workflow now publishes the npm package (with provenance) on tags, in addition to the GHCR image.
+
+### Changed
+
+- **Per-handler debug logging** (`{ tool, ms }`, no payloads) and consolidated address parsing into `src/addresses.ts` (deduplicated between `imap.ts` and `smtp.ts`).
+
 ## [Unreleased]
 
 ### Changed
