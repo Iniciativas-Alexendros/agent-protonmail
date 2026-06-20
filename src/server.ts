@@ -23,6 +23,7 @@ import { z } from "zod";
 import { ImapClient } from "./imap.js";
 import type { SearchObject } from "imapflow";
 import { SmtpClient, buildForwardOptions, buildReplyOptions } from "./smtp.js";
+import { VERSION } from "./version.js";
 import type { Config } from "./config.js";
 
 type Logger = ReturnType<typeof import("./config.js").createLogger>;
@@ -116,17 +117,49 @@ export function buildServer(
   const smtp = new SmtpClient(cfg.bridge, log);
 
   const server = new McpServer(
-    { name: "protonmail-mcp", version: "0.3.0" },
+    { name: "protonmail-mcp", version: VERSION },
     {
       instructions:
         "Proton Mail via Proton Mail Bridge. Before any operation, call proton_list_folders to see available mailboxes. Use UIDs (not sequence numbers) when modifying messages. Bridge must be running and reachable at the configured host.",
     },
   );
 
+  // Wrapper de registro con traza por handler. `register` comparte la firma
+  // (sobrecargada y genérica) de `server.registerTool`, así que cada call-site
+  // conserva el tipado de `args` inferido desde su inputSchema; el casting a
+  // `any` queda confinado aquí. Emite un `debug` con { tool, ms } al terminar
+  // (éxito o error) — sin volcar args, que pueden traer cuerpos o direcciones.
+  const register: typeof server.registerTool = ((name, config, cb) =>
+    server.registerTool(
+      name as never,
+      config as never,
+      (async (...callArgs: unknown[]) => {
+        const startedAt = Date.now();
+        try {
+          return await (cb as (...a: unknown[]) => Promise<unknown>)(...callArgs);
+        } finally {
+          log.debug("tool", { tool: name, ms: Date.now() - startedAt });
+        }
+      }) as never,
+    )) as typeof server.registerTool;
+
+  /**
+   * Resuelve el buzón de Trash. Si el caller no pasa `override`, busca el
+   * mailbox con special-use `\Trash` (IMAP) en vez de asumir el literal
+   * inglés "Trash" — que falla en cuentas con la papelera en otro idioma
+   * (Papelera, Corbeille…). Fallback a "Trash" si no hay match.
+   */
+  async function resolveTrashPath(override?: string): Promise<string> {
+    if (override) return override;
+    const mbs = await imap.listMailboxes();
+    const trash = mbs.find((m) => m.specialUse === "\\Trash");
+    return trash?.path ?? "Trash";
+  }
+
   // ---------------------------------------------------------------------------
   // Folders
   // ---------------------------------------------------------------------------
-  server.registerTool(
+  register(
     "proton_list_folders",
     {
       title: "List mailboxes (folders/labels)",
@@ -169,7 +202,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_create_folder",
     {
       title: "Create a mailbox (folder)",
@@ -195,7 +228,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_mailbox_status",
     {
       title: "Get mailbox counts",
@@ -237,7 +270,7 @@ export function buildServer(
   // ---------------------------------------------------------------------------
   // Listing and search
   // ---------------------------------------------------------------------------
-  server.registerTool(
+  register(
     "proton_list_emails",
     {
       title: "List emails in a mailbox",
@@ -287,7 +320,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_search_emails",
     {
       title: "Search emails",
@@ -302,10 +335,12 @@ export function buildServer(
           .describe("Which fields to search. 'text' = anywhere."),
         since: z
           .string()
+          .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid ISO date")
           .optional()
           .describe("ISO date — only messages on/after this date"),
         before: z
           .string()
+          .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid ISO date")
           .optional()
           .describe("ISO date — only messages before this date"),
         unseen_only: z
@@ -387,7 +422,7 @@ export function buildServer(
   // ---------------------------------------------------------------------------
   // Read
   // ---------------------------------------------------------------------------
-  server.registerTool(
+  register(
     "proton_get_email",
     {
       title: "Read one email (full body)",
@@ -435,7 +470,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_get_attachment",
     {
       title: "Download an attachment",
@@ -504,7 +539,7 @@ export function buildServer(
   // ---------------------------------------------------------------------------
   // Send / reply / forward
   // ---------------------------------------------------------------------------
-  server.registerTool(
+  register(
     "proton_send_email",
     {
       title: "Send an email",
@@ -569,7 +604,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_reply_email",
     {
       title: "Reply to an email",
@@ -634,7 +669,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_forward_email",
     {
       title: "Forward an email",
@@ -686,7 +721,7 @@ export function buildServer(
   // ---------------------------------------------------------------------------
   // Modify
   // ---------------------------------------------------------------------------
-  server.registerTool(
+  register(
     "proton_flag_email",
     {
       title: "Flag / unflag emails",
@@ -749,7 +784,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_move_email",
     {
       title: "Move an email to another mailbox",
@@ -780,7 +815,7 @@ export function buildServer(
     },
   );
 
-  server.registerTool(
+  register(
     "proton_delete_email",
     {
       title: "Delete an email",
@@ -792,9 +827,9 @@ export function buildServer(
         mode: z.enum(["trash", "permanent"]).default("trash"),
         trash_path: z
           .string()
-          .default("Trash")
+          .optional()
           .describe(
-            "Path of your Trash mailbox (find via proton_list_folders)",
+            "Override for the Trash mailbox path. If omitted, the \\Trash special-use mailbox is auto-detected (works with Papelera/Corbeille/etc.).",
           ),
       },
       annotations: {
@@ -806,13 +841,14 @@ export function buildServer(
     },
     async ({ mailbox, uid, mode, trash_path }) => {
       if (mode === "trash") {
-        const ok = await imap.moveEmail(mailbox, uid, trash_path);
+        const target = await resolveTrashPath(trash_path);
+        const ok = await imap.moveEmail(mailbox, uid, target);
         return {
           content: [
             {
               type: "text",
               text: ok
-                ? `Moved UID ${uid} to ${trash_path}.`
+                ? `Moved UID ${uid} to ${target}.`
                 : "Delete-to-trash failed.",
             },
           ],

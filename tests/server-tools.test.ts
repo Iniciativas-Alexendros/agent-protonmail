@@ -129,6 +129,7 @@ const cfg: Config = {
     smtpPort: 1025,
     from: "me@proton.me",
     tlsInsecure: true,
+    smtpSecurity: "starttls",
   },
   transport: {
     kind: "stdio",
@@ -343,6 +344,10 @@ describe("proton_search_emails", () => {
   it("rejects unknown field in fields enum", async () => {
     await expectValidationError("proton_search_emails", { fields: ["nope"] });
   });
+
+  it("rejects a malformed ISO date in 'since' (Zod refine, not a cryptic IMAP error)", async () => {
+    await expectValidationError("proton_search_emails", { since: "2026-99-99" });
+  });
 });
 
 // -----------------------------------------------------------------------------
@@ -512,6 +517,44 @@ describe("proton_delete_email", () => {
       },
     });
     expect(firstText(res)).toContain("Moved UID 42 to Trash");
+  });
+
+  it("trash mode auto-detects the \\Trash mailbox when trash_path is omitted", async () => {
+    const client = await makeClient();
+    const res = await client.callTool({
+      name: "proton_delete_email",
+      arguments: { mailbox: "INBOX", uid: 42, mode: "trash" },
+    });
+    expect(firstText(res)).toContain("Moved UID 42 to Trash");
+  });
+
+  it("trash mode resolves a non-English Trash (Papelera) via \\Trash special-use", async () => {
+    imapState.listResult = [
+      {
+        path: "INBOX",
+        name: "INBOX",
+        delimiter: "/",
+        flags: new Set(),
+        specialUse: "\\Inbox",
+        subscribed: true,
+        listed: true,
+      },
+      {
+        path: "Papelera",
+        name: "Papelera",
+        delimiter: "/",
+        flags: new Set(),
+        specialUse: "\\Trash",
+        subscribed: true,
+        listed: true,
+      },
+    ];
+    const client = await makeClient();
+    const res = await client.callTool({
+      name: "proton_delete_email",
+      arguments: { mailbox: "INBOX", uid: 42, mode: "trash" },
+    });
+    expect(firstText(res)).toContain("Moved UID 42 to Papelera");
   });
 
   it("happy path permanent mode expunges", async () => {

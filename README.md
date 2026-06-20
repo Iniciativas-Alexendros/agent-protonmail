@@ -165,7 +165,32 @@ claude mcp add --transport stdio proton-mail --scope user \
 
 Dentro de cualquier sesión de Claude Code, `/mcp` muestra `proton-mail: connected` y las 13 tools. A partir de ahí, lenguaje natural: _"resume mis correos no leídos de la última semana por tema"_.
 
-### 3 · HTTP remoto (Routines, backend propio) — modo avanzado
+### 3 · Otros clientes MCP (OpenCode, SDK genérico) — `stdio` estándar
+
+El servidor es un MCP **stdio estándar**: cualquier cliente que sepa lanzar un proceso lo consume sin acoplamiento a Claude Code. Para [OpenCode](https://opencode.ai) y similares que leen un bloque `mcpServers`, basta con apuntar a `npx`:
+
+```jsonc
+{
+  "mcpServers": {
+    "protonmail": {
+      "command": "npx",
+      "args": ["-y", "@alexendros/protonmail-mcp"],
+      "env": {
+        "PROTON_BRIDGE_USER": "you@proton.me",
+        "PROTON_BRIDGE_PASS": "your-bridge-password",
+        "PROTON_MAIL_FROM": "you@proton.me",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
+```
+
+> El mismo patrón de **wrapper `stdio`** para no dejar el bridge password en claro aplica aquí: sustituye `command` por tu wrapper y resuelve el secreto JIT (ver [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md)).
+>
+> **Variable `PROTON_BRIDGE_SMTP_SECURITY`** (`starttls` por defecto): déjala sin tocar para Proton Bridge. `implicit` (SMTPS) y `plain` (sin TLS) existen para interoperar con otros servidores SMTP, p. ej. el GreenMail de los tests E2E.
+
+### 4 · HTTP remoto (Routines, backend propio) — modo avanzado
 
 El servidor también habla `streamable HTTP` con bearer + allowlist de origen, para Claude Routines o un backend propio. Es un despliegue autohospedado completo (Docker/Dokploy, cert TLS, token), documentado aparte: ver [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) y la [Integración en Next.js](#integración-en-nextjs). No es necesario para el uso local.
 

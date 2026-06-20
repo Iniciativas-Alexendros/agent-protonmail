@@ -11,8 +11,13 @@
  *     tratarían la respuesta como hilo nuevo y romperían la conversación.
  */
 import nodemailer, { type Transporter } from "nodemailer";
+import { addrMatches, extractEmail } from "./addresses.js";
 import type { Config } from "./config.js";
 import type { EmailFull, ImapClient } from "./imap.js";
+
+// Re-export para consumidores históricos (tests/smtp-helpers.test.ts) que los
+// importaban desde aquí antes de consolidarlos en addresses.ts.
+export { addrMatches, extractEmail } from "./addresses.js";
 
 export interface SendOptions {
   to: string[];
@@ -42,13 +47,16 @@ export class SmtpClient {
   private transporter: Transporter;
 
   constructor(private readonly cfg: Config["bridge"], private readonly log: { info: (m: string, e?: unknown) => void; debug: (m: string, e?: unknown) => void; }) {
+    // Bridge escucha SMTP submission con STARTTLS, no TLS directo. Por eso el
+    // default `starttls` = secure:false + requireTLS:true ("inicia plaintext y
+    // súbete a TLS con STARTTLS, obligatorio"). `implicit` = SMTPS (secure:true);
+    // `plain` = sin TLS (solo servidores de confianza, p. ej. GreenMail E2E).
+    const security = cfg.smtpSecurity ?? "starttls";
     this.transporter = nodemailer.createTransport({
       host: cfg.host,
       port: cfg.smtpPort,
-      // Bridge escucha SMTP submission con STARTTLS, no TLS directo.
-      // secure=false + requireTLS=true = "inicia plaintext y súbete a TLS con STARTTLS, obligatorio".
-      secure: false,
-      requireTLS: true,
+      secure: security === "implicit",
+      requireTLS: security === "starttls",
       tls: { rejectUnauthorized: !cfg.tlsInsecure },
       auth: { user: cfg.user, pass: cfg.pass },
       // Pool: 2 conexiones simultáneas es más que suficiente para un MCP —
@@ -196,19 +204,8 @@ export function collectReferences(original: EmailFull): string[] {
   return existing;
 }
 
-export function addrMatches(addr: string, target: string): boolean {
-  const m = addr.match(/<([^>]+)>/);
-  const email = (m?.[1] ?? addr).toLowerCase().trim();
-  return email === target.toLowerCase().trim();
-}
-
 function isInList(addr: string, list: string[]): boolean {
   return list.some((a) => addrMatches(a, extractEmail(addr)));
-}
-
-export function extractEmail(s: string): string {
-  const m = s.match(/<([^>]+)>/);
-  return (m?.[1] ?? s).trim();
 }
 
 function buildQuote(original: EmailFull, body: { text?: string; html?: string }): { text?: string; html?: string } {

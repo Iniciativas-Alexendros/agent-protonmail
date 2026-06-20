@@ -26,6 +26,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { compareTokens, extractBearer } from "./auth.js";
+import { VERSION } from "./version.js";
 import type { Config } from "./config.js";
 
 type Logger = {
@@ -148,7 +149,7 @@ export function buildHttpApp(deps: HttpAppDeps): Express {
   // y el healthcheck de Docker. Expone el número de sesiones como métrica
   // barata para detectar fugas o cargas anómalas.
   app.get("/healthz", (_req: Request, res: Response) => {
-    res.json({ ok: true, version: "0.2.0", sessions: sessions.size });
+    res.json({ ok: true, version: VERSION, sessions: sessions.size });
   });
 
   // Eviction de sesiones idle. `setInterval().unref()` permite al proceso

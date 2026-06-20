@@ -30,6 +30,12 @@ const ConfigSchema = z.object({
     // sin validar. Poner a `false` sólo si importas la CA de Bridge al
     // trust store del contenedor/host.
     tlsInsecure: z.boolean().default(true),
+    // Estrategia TLS del SMTP. Proton Bridge habla STARTTLS en 1025, así que
+    // `starttls` (default) preserva el comportamiento histórico. `implicit`
+    // (SMTPS, secure:true) e `plain` (sin TLS) existen para interoperar con
+    // otros servidores SMTP — p. ej. GreenMail en los tests E2E. No afecta a
+    // Bridge mientras se quede en el default.
+    smtpSecurity: z.enum(["starttls", "implicit", "plain"]).default("starttls"),
   }),
   transport: z.object({
     kind: z.enum(["stdio", "http"]).default("stdio"),
@@ -63,6 +69,10 @@ export function loadConfig(): Config {
       smtpPort: Number(env.PROTON_BRIDGE_SMTP_PORT ?? 1025),
       from: env.PROTON_MAIL_FROM ?? env.PROTON_BRIDGE_USER ?? "",
       tlsInsecure: (env.PROTON_BRIDGE_TLS_INSECURE ?? "true") === "true",
+      smtpSecurity: (env.PROTON_BRIDGE_SMTP_SECURITY ?? "starttls") as
+        | "starttls"
+        | "implicit"
+        | "plain",
     },
     transport: {
       kind: (env.MCP_TRANSPORT ?? "stdio") as "stdio" | "http",

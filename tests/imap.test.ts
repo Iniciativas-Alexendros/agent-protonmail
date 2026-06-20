@@ -32,6 +32,7 @@ const imapState = {
   usable: true,
   connectAttempts: 0,
   connectFailUntil: 0, // connect() lanza mientras attempts <= este valor
+  connectErrorMessage: "ECONNREFUSED", // mensaje que lanza connect() al fallar
   // Palancas de error por método
   listShouldThrow: false,
   statusShouldThrow: false,
@@ -56,7 +57,7 @@ vi.mock("imapflow", () => {
     async connect() {
       imapState.connectAttempts += 1;
       if (imapState.connectAttempts <= imapState.connectFailUntil) {
-        throw new Error("ECONNREFUSED");
+        throw new Error(imapState.connectErrorMessage);
       }
     }
     async logout() {}
@@ -128,6 +129,7 @@ const bridgeCfg: Config["bridge"] = {
   smtpPort: 1025,
   from: "me@proton.me",
   tlsInsecure: true,
+  smtpSecurity: "starttls",
 };
 
 const silentLog = {
@@ -210,6 +212,7 @@ beforeEach(() => {
   imapState.usable = true;
   imapState.connectAttempts = 0;
   imapState.connectFailUntil = 0;
+  imapState.connectErrorMessage = "ECONNREFUSED";
   imapState.listShouldThrow = false;
   imapState.statusShouldThrow = false;
   imapState.searchShouldThrow = false;
@@ -273,6 +276,42 @@ describe("ImapClient · connect/retry", () => {
     await vi.advanceTimersByTimeAsync(5000); // cubre 500 + 1000 ms de backoff
     await assertion;
     expect(imapState.connectAttempts).toBe(3);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// describeConnError: mensajes de conexión diferenciados y accionables
+// -----------------------------------------------------------------------------
+describe("ImapClient · differentiated connection errors", () => {
+  async function failWith(message: string): Promise<Error> {
+    vi.useFakeTimers();
+    imapState.connectFailUntil = 99;
+    imapState.connectErrorMessage = message;
+    const c = makeClient();
+    const p = c.listMailboxes();
+    const caught = p.catch((e: Error) => e);
+    await vi.advanceTimersByTimeAsync(5000);
+    return caught;
+  }
+
+  it("maps ECONNREFUSED to a 'Bridge not running' hint (and stays grep-able)", async () => {
+    const err = await failWith("ECONNREFUSED");
+    expect(err.message).toMatch(/ECONNREFUSED/);
+    expect(err.message).toMatch(/no escucha IMAP en 127\.0\.0\.1:1143/);
+    expect(err.message).toMatch(/Bridge/);
+    expect(err.cause).toBeInstanceOf(Error);
+  });
+
+  it("maps an auth failure to an app-password hint", async () => {
+    const err = await failWith("AUTHENTICATIONFAILED invalid credentials");
+    expect(err.message).toMatch(/credenciales/i);
+    expect(err.message).toMatch(/app-password/i);
+  });
+
+  it("maps a timeout to a host/port/firewall hint", async () => {
+    const err = await failWith("ETIMEDOUT connection timeout");
+    expect(err.message).toMatch(/timeout/i);
+    expect(err.message).toMatch(/firewall/i);
   });
 });
 

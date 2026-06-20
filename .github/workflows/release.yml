@@ -134,3 +134,53 @@ jobs:
           notes: |
             Registry: ghcr.io/${{ github.repository }}.
             `latest` se actualiza en push a main O tag estable (no pre-release).
+
+  # ────────────────────────────────────────────────────────────────────
+  # Publicación a npm · SOLO en tags vX.Y.Z. Cierra el hueco histórico por el
+  # que npm se quedó en 0.1.0 mientras el repo avanzaba: el plugin y cualquier
+  # MCP por `npx -y @alexendros/protonmail-mcp` (Claude Code, OpenCode, …)
+  # tiraban de código obsoleto.
+  #
+  # Auth: TRUSTED PUBLISHING (OIDC) — sin NPM_TOKEN. El `id-token: write` deja
+  # que npm intercambie el token OIDC de GitHub Actions por credenciales de
+  # publicación efímeras. Requiere configurar el trusted publisher en
+  # npmjs.com (paquete → Settings → Trusted publisher: repo
+  # Iniciativas-Alexendros/plugin-protonmail-claudecode, workflow release.yml).
+  # La provenance se genera automáticamente.
+  # ────────────────────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish to npm
+    needs: [gate-semver]
+    if: |
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.gate-semver.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      # Sin `cache: npm` a propósito: en un job que PUBLICA artefactos, restaurar
+      # una cache podría envenenar el paquete publicado. El caching está
+      # deshabilitado (no hay input `cache`), así que el ignore solo silencia el
+      # heurístico de zizmor que marca setup-node por defecto en jobs de release.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning]
+        with:
+          node-version: 22
+      # Trusted publishing (OIDC) requiere npm >= 11.5.1; los runners traen 10.x.
+      - name: Upgrade npm (OIDC trusted publishing needs >= 11.5.1)
+        run: npm install -g npm@latest
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} != package.json ${PKG_VERSION}"; exit 1
+          fi
+      # Sin NODE_AUTH_TOKEN: la autenticación es OIDC (trusted publisher).
+      # Provenance automática. `--access public` por ser paquete con scope.
+      - name: Publish (OIDC trusted publishing + provenance)
+        run: npm publish --provenance --access public

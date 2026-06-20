@@ -63,6 +63,15 @@ describe("loadConfig · Zod env validation", () => {
     expect(cfg.transport.kind).toBe("stdio");
   });
 
+  it("defaults smtpSecurity to starttls (Bridge) and honors an override", () => {
+    process.env.PROTON_BRIDGE_USER = "a@b.com";
+    process.env.PROTON_BRIDGE_PASS = "x";
+    process.env.PROTON_MAIL_FROM = "a@b.com";
+    expect(loadConfig().bridge.smtpSecurity).toBe("starttls");
+    process.env.PROTON_BRIDGE_SMTP_SECURITY = "implicit";
+    expect(loadConfig().bridge.smtpSecurity).toBe("implicit");
+  });
+
   it("reads custom bridge host and ports from env", () => {
     process.env.PROTON_BRIDGE_USER = "a@b.com";
     process.env.PROTON_BRIDGE_PASS = "x";
