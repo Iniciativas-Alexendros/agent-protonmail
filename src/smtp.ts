@@ -47,13 +47,16 @@ export class SmtpClient {
   private transporter: Transporter;
 
   constructor(private readonly cfg: Config["bridge"], private readonly log: { info: (m: string, e?: unknown) => void; debug: (m: string, e?: unknown) => void; }) {
+    // Bridge escucha SMTP submission con STARTTLS, no TLS directo. Por eso el
+    // default `starttls` = secure:false + requireTLS:true ("inicia plaintext y
+    // súbete a TLS con STARTTLS, obligatorio"). `implicit` = SMTPS (secure:true);
+    // `plain` = sin TLS (solo servidores de confianza, p. ej. GreenMail E2E).
+    const security = cfg.smtpSecurity ?? "starttls";
     this.transporter = nodemailer.createTransport({
       host: cfg.host,
       port: cfg.smtpPort,
-      // Bridge escucha SMTP submission con STARTTLS, no TLS directo.
-      // secure=false + requireTLS=true = "inicia plaintext y súbete a TLS con STARTTLS, obligatorio".
-      secure: false,
-      requireTLS: true,
+      secure: security === "implicit",
+      requireTLS: security === "starttls",
       tls: { rejectUnauthorized: !cfg.tlsInsecure },
       auth: { user: cfg.user, pass: cfg.pass },
       // Pool: 2 conexiones simultáneas es más que suficiente para un MCP —

@@ -129,6 +129,7 @@ const cfg: Config = {
     smtpPort: 1025,
     from: "me@proton.me",
     tlsInsecure: true,
+    smtpSecurity: "starttls",
   },
   transport: {
     kind: "stdio",

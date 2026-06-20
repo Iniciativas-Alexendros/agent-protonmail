@@ -129,6 +129,7 @@ const bridgeCfg: Config["bridge"] = {
   smtpPort: 1025,
   from: "me@proton.me",
   tlsInsecure: true,
+  smtpSecurity: "starttls",
 };
 
 const silentLog = {

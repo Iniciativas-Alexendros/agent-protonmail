@@ -61,6 +61,42 @@ jobs:
       - name: High/critical vulnerabilities only
         run: npm audit --audit-level=high
 
+  e2e:
+    name: E2E (GreenMail · IMAP/SMTP reales)
+    runs-on: ubuntu-latest
+    services:
+      greenmail:
+        image: greenmail/standalone:2.1.0
+        ports:
+          - 3025:3025
+          - 3143:3143
+        env:
+          GREENMAIL_OPTS: -Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Wait for GreenMail IMAP (127.0.0.1:3143)
+        run: |
+          for i in $(seq 1 30); do
+            if (exec 3<>/dev/tcp/127.0.0.1/3143) 2>/dev/null; then
+              echo "GreenMail listo"; exec 3>&-; exit 0
+            fi
+            sleep 1
+          done
+          echo "GreenMail no respondió en :3143"; exit 1
+      - name: E2E full cycle (send → read → flag → move → delete)
+        env:
+          GREENMAIL_HOST: 127.0.0.1
+          GREENMAIL_IMAP_PORT: "3143"
+          GREENMAIL_SMTP_PORT: "3025"
+        run: npm run test:e2e
+
   docker-build:
     name: Docker build smoke
     runs-on: ubuntu-latest
