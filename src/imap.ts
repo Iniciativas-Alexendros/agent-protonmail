@@ -20,6 +20,7 @@
  */
 import { ImapFlow, type ImapFlowOptions, type ListResponse, type FetchQueryObject, type SearchObject } from "imapflow";
 import { simpleParser, type ParsedMail, type Attachment } from "mailparser";
+import { addrListToString, addrListToArray, addressesToArray } from "./addresses.js";
 import type { Config } from "./config.js";
 
 export interface EmailSummary {
@@ -137,7 +138,41 @@ export class ImapClient {
         }
       }
     }
-    throw lastErr instanceof Error ? lastErr : new Error("IMAP connect failed");
+    throw this.describeConnError(lastErr);
+  }
+
+  /**
+   * Traduce un fallo de conexión a un mensaje accionable para el modelo/humano.
+   *
+   * Sin esto, los tres modos de fallo más comunes (Bridge apagado, credenciales
+   * incorrectas, puerto bloqueado) colapsaban al mismo "IMAP connect failed",
+   * que el modelo interpreta como "tool rota". El error original se preserva en
+   * `cause`, y el token de causa (ECONNREFUSED/timeout/auth) se incrusta en el
+   * mensaje para que sea grepeable y diagnosticable de un vistazo.
+   */
+  private describeConnError(err: unknown): Error {
+    const e = err as { code?: string; message?: string; authenticationFailed?: boolean } | undefined;
+    const code = e?.code ?? "";
+    const msg = e?.message ?? "";
+    const where = `${this.cfg.host}:${this.cfg.imapPort}`;
+    const blob = `${code} ${msg}`.toLowerCase();
+
+    let friendly: string;
+    if (code === "ECONNREFUSED" || blob.includes("econnrefused")) {
+      friendly = `Proton Bridge no escucha IMAP en ${where} (ECONNREFUSED). ¿Está el Bridge corriendo? Lánzalo con 'protonmail-bridge-core --cli' y verifica con 'ss -ltn | grep ${this.cfg.imapPort}'.`;
+    } else if (
+      e?.authenticationFailed ||
+      blob.includes("authenticationfailed") ||
+      blob.includes("invalid credentials") ||
+      blob.includes("auth")
+    ) {
+      friendly = `Proton Bridge rechazó las credenciales en ${where} (auth). Usa el app-password que genera Bridge para este equipo, NO la contraseña de tu cuenta Proton.`;
+    } else if (code === "ETIMEDOUT" || blob.includes("timeout") || blob.includes("etimedout")) {
+      friendly = `Sin respuesta de Proton Bridge en ${where} (timeout). ¿Host/puerto correctos o firewall bloqueando?`;
+    } else {
+      friendly = `Fallo conectando a Proton Bridge IMAP en ${where}: ${msg || "error desconocido"}.`;
+    }
+    return new Error(friendly, { cause: err instanceof Error ? err : undefined });
   }
 
   async close(): Promise<void> {
@@ -384,38 +419,4 @@ export class ImapClient {
       headers,
     };
   }
-}
-
-// -----------------------------------------------------------------------------
-// Address helpers
-// -----------------------------------------------------------------------------
-type EnvelopeAddress = { name?: string; address?: string; mailbox?: string; host?: string };
-
-function addrListToString(list: EnvelopeAddress[] | undefined): string | undefined {
-  if (!list || list.length === 0) return undefined;
-  return list.map(envelopeAddrToString).filter(Boolean).join(", ");
-}
-
-function addrListToArray(list: EnvelopeAddress[] | undefined): string[] {
-  if (!list) return [];
-  return list.map(envelopeAddrToString).filter((s): s is string => !!s);
-}
-
-function envelopeAddrToString(a: EnvelopeAddress): string | undefined {
-  const email = a.address ?? (a.mailbox && a.host ? `${a.mailbox}@${a.host}` : undefined);
-  if (!email) return undefined;
-  return a.name ? `${a.name} <${email}>` : email;
-}
-
-function addressesToArray(field: ParsedMail["to"] | ParsedMail["cc"] | ParsedMail["bcc"] | ParsedMail["replyTo"]): string[] {
-  if (!field) return [];
-  const list = Array.isArray(field) ? field : [field];
-  const out: string[] = [];
-  for (const item of list) {
-    if (!item?.value) continue;
-    for (const v of item.value) {
-      if (v.address) out.push(v.name ? `${v.name} <${v.address}>` : v.address);
-    }
-  }
-  return out;
 }

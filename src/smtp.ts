@@ -11,8 +11,13 @@
  *     tratarían la respuesta como hilo nuevo y romperían la conversación.
  */
 import nodemailer, { type Transporter } from "nodemailer";
+import { addrMatches, extractEmail } from "./addresses.js";
 import type { Config } from "./config.js";
 import type { EmailFull, ImapClient } from "./imap.js";
+
+// Re-export para consumidores históricos (tests/smtp-helpers.test.ts) que los
+// importaban desde aquí antes de consolidarlos en addresses.ts.
+export { addrMatches, extractEmail } from "./addresses.js";
 
 export interface SendOptions {
   to: string[];
@@ -196,19 +201,8 @@ export function collectReferences(original: EmailFull): string[] {
   return existing;
 }
 
-export function addrMatches(addr: string, target: string): boolean {
-  const m = addr.match(/<([^>]+)>/);
-  const email = (m?.[1] ?? addr).toLowerCase().trim();
-  return email === target.toLowerCase().trim();
-}
-
 function isInList(addr: string, list: string[]): boolean {
   return list.some((a) => addrMatches(a, extractEmail(addr)));
-}
-
-export function extractEmail(s: string): string {
-  const m = s.match(/<([^>]+)>/);
-  return (m?.[1] ?? s).trim();
 }
 
 function buildQuote(original: EmailFull, body: { text?: string; html?: string }): { text?: string; html?: string } {

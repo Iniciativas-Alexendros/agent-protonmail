@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { VERSION } from "../src/version.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -49,6 +50,10 @@ describe("metadata coherence · version", () => {
     expect(server.version).toBe(pkgVersion);
     expect(serverPkg0.version).toBe(pkgVersion);
     expect(plugin.version).toBe(pkgVersion);
+  });
+
+  it("the runtime VERSION constant is the single source derived from package.json", () => {
+    expect(VERSION).toBe(pkg.version as string);
   });
 });
 
