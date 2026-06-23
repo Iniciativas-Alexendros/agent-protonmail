@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Nota de dependencias (revisión 2026-06-21)
+
+El árbol de dependencias de producción se ha revisado y todas las licencias son
+permissivas: MIT, ISC, BSD-2-Clause, BSD-3-Clause o MIT-0. La única excepción es
+`@zone-eu/mailsplit`, publicado bajo licencia dual "MIT OR EUPL-1.1+". Este
+proyecto consume dicho paquete bajo los términos MIT, por lo que no se activan
+obligaciones copyleft en la distribución del paquete.
