@@ -3,7 +3,7 @@
   "name": "io.github.Alexendros/protonmail-mcp",
   "description": "Proton Mail MCP via Bridge (IMAP/SMTP) · 13 tools · dual transport stdio + HTTP.",
   "repository": {
-    "url": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode",
+    "url": "https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool",
     "source": "github"
   },
   "version": "0.4.0",

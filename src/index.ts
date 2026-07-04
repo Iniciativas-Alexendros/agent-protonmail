@@ -3,7 +3,7 @@
  * Entry point del MCP server.
  *
  * Dos modos de arranque según `MCP_TRANSPORT`:
- *  - `stdio`: pensado para Claude Code CLI. Un único `McpServer` + `ImapClient`
+ *  - `stdio`: pensado para cliente MCP local. Un único `McpServer` + `ImapClient`
  *    + `SmtpClient` viven lo que dura el proceso. stdout queda RESERVADO al
  *    protocolo JSON-RPC; los logs van siempre a stderr (ver `config.ts`).
  *  - `http`: transporte `StreamableHTTPServerTransport` detrás de Express.
@@ -18,7 +18,7 @@
  *    a cualquier navegador que nos alcance por DNS → fail-closed.
  *  - Handlers SIGINT/SIGTERM/SIGHUP cierran las conexiones a Bridge antes de
  *    salir. Necesario para no dejar sockets IMAP colgados en reinicios
- *    rápidos de Dokploy.
+ *    rápidos del orquestador.
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadConfig, createLogger } from "./config.js";
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
 
   const log = createLogger(cfg.logLevel);
 
-  // Rama stdio: cliente local (Claude Code). Sin red, sin auth — el proceso
+  // Rama stdio: cliente local. Sin red, sin auth — el proceso
   // confía en quien lo lance.
   if (cfg.transport.kind === "stdio") {
     const { server, imap, smtp } = buildServer(cfg, log);
@@ -99,7 +99,7 @@ function installSignalHandlers(log: ReturnType<typeof createLogger>, cleanup: ()
   process.on("SIGTERM", () => void handler("SIGTERM"));
   process.on("SIGHUP", () => void handler("SIGHUP"));
   // Crasheos silenciosos no deseados: los escribimos a stderr y matamos el
-  // proceso para que el orquestador (Dokploy/docker) reinicie en vez de
+  // proceso para que el orquestador (Docker/systemd) reinicie en vez de
   // dejar un servidor en estado inconsistente.
   process.on("uncaughtException", (err) => {
     process.stderr.write(`[uncaughtException] ${err.stack}\n`);

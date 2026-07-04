@@ -76,7 +76,7 @@ export function buildHttpApp(deps: HttpAppDeps): Express {
     message: { error: "rate_limit_exceeded" },
   });
 
-  // CORS preflight handler. DEBE ir antes de auth: el navegador (y claude.ai)
+  // CORS preflight handler. DEBE ir antes de auth: los clientes web
   // hacen OPTIONS preflight sin Authorization header; si pasa por auth recibe
   // 401 y aborta. Aquí respondemos 204 con headers CORS si el Origin está
   // allowlisted, y dejamos que las requests no-OPTIONS sigan al auth.

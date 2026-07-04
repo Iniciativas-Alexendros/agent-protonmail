@@ -16,11 +16,11 @@ una máquina que controla el operador.
 ## 2. Capas
 
 ```
-Consumidores MCP            stdio: Claude Code CLI (local)
-                            HTTP : Claude Routines / backend propio
+Consumidores MCP            stdio: cliente MCP local (agente IA, CLI)
+                            HTTP : cliente MCP remoto / backend propio
         │ JSON-RPC                │ HTTPS + Bearer + Origin allowlist
         ▼                         ▼
-protonmail-mcp (TypeScript · @modelcontextprotocol/sdk@^1.19)
+protonmail-mcp (TypeScript · @modelcontextprotocol/sdk@^1.29)
    config.ts · auth.ts · http.ts · server.ts · imap.ts · smtp.ts
         │ IMAP 1143 STARTTLS      │ SMTP 1025 STARTTLS
         ▼                         ▼
@@ -54,8 +54,8 @@ Servidores Proton (cifrado E2E)
 ### Claves de diseño
 
 - **Frontera cripto**: la garantía E2E de Proton se preserva porque el
-  descifrado ocurre en Bridge, en una máquina del operador. Ni Anthropic ni
-  terceros ven correo descifrado; sólo el agente autorizado.
+  descifrado ocurre en Bridge, en una máquina del operador. Sólo el agente
+  autorizado ve correo descifrado.
 - **Per-session HTTP transport**: un `StreamableHTTPServerTransport` por
   `Mcp-Session-Id` (recomendación del SDK), evitando bleed de estado entre
   clientes concurrentes; eviction tras 30 min idle.
@@ -111,18 +111,17 @@ Dos contenedores en `docker-compose.yml`:
   credential-helpers, libGL/libOpenGL y libs Qt XCB). Requiere un login
   one-off interactivo; el volumen persiste el vault.
 - **mcp**: este servidor en modo HTTP. Imagen `Dockerfile` (multi-stage
-  `node:20-alpine`).
+  `node:22-alpine`).
 
-Red `proton-net` interna entre ambos; `dokploy-network` externa para que
-Traefik emita el cert Let's Encrypt y exponga `/mcp`. En
-`NODE_ENV=production` el servidor se niega a arrancar si
+Red `proton-net` interna entre ambos; `proxy-network` externa para que el
+reverse proxy (Traefik, Caddy, Nginx, etc.) emita el cert y exponga `/mcp`.
+En `NODE_ENV=production` el servidor se niega a arrancar si
 `MCP_ALLOWED_ORIGINS` está vacío.
 
 ## 6. No-objetivos
 
 - No reimplementa criptografía Proton: delega toda la E2E en Bridge.
-- No expone un endpoint HTTP público sin autenticación (por eso `remotes[]`
-  de `server.json` queda vacío).
+- No expone un endpoint HTTP público sin autenticación.
 - No permite spoofing del remitente: `from` queda fijo al configurado.
 - No es un boilerplate genérico de correo; es un cliente específico de
   Proton vía Bridge.
@@ -137,17 +136,17 @@ Detalle completo y controles en `SECURITY.md`. Resumen:
 | T2 | DNS rebinding | `MCP_ALLOWED_ORIGINS` exigido en producción |
 | T3 | Abuso de relay SMTP | Rate-limit + límite diario de Bridge + `from` fijo |
 | T4 | Prompt injection vía cuerpo de email | Tratar cuerpos como no confiables; HITL en tools destructivas |
-| T5 | Robo de credenciales IMAP del entorno | Secretos solo en Dokploy / `.env` 0600; rotación vía Bridge |
+| T5 | Robo de credenciales IMAP del entorno | Secretos solo en deployment secrets / `.env` 0600; rotación vía Bridge |
 | T6 | Exfiltración vía adjuntos en contexto LLM | Cap `max_bytes` (10 MB, hard 50 MB) + revisión del operador |
 | T7 | Downgrade TLS del canal Bridge local | Bridge en `127.0.0.1` / red interna; `PROTON_BRIDGE_CA_PATH` para pinning |
 
 La E2E de Proton se detiene en la frontera de Bridge: todo aguas abajo (este
-MCP, Claude, Routines) opera sobre texto en claro por diseño.
+MCP, el agente, cualquier dashboard) opera sobre texto en claro por diseño.
 
 ## 8. Stack
 
-TypeScript 5.7 (`strict`, `NodeNext`) · Node ≥20 ·
-`@modelcontextprotocol/sdk@^1.19` · `imapflow` · `nodemailer` ·
+TypeScript 5.7 (`strict`, `NodeNext`) · Node ≥22 ·
+`@modelcontextprotocol/sdk@^1.29` · `imapflow` · `nodemailer` ·
 `mailparser` · `zod` · `express` + `express-rate-limit` · Vitest +
 `supertest`. CI: matrix Node 20/22 (typecheck, test, build, smoke),
 `npm audit`, CodeQL, docker build; release a GHCR en push a `main`.

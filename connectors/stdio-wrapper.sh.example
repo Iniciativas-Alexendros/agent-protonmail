@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# protonmail-mcp stdio wrapper (EXAMPLE / TEMPLATE)
+#
+# Lanza el Proton Mail MCP server sobre STDIO con los ajustes de conexión
+# a Proton Bridge, resolviendo el Bridge password desde un gestor de secretos
+# en runtime para que nunca aterrice en el repo, en env files versionados ni
+# en el historial del shell.
+#
+# Copia este archivo (quita el .example), rellena TUS placeholders, marca
+# el script ejecutable (chmod +x) y regístralo como `command` en tu cliente
+# MCP (ver docs/local-stdio-secrets.md).
+#
+# SECURITY: todos los valores de abajo son PLACEHOLDERS. Sustitúyelos por
+# tus datos reales en tu copia local; nunca los commitees.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+# --- Bridge connection (non-secret) ----------------------------------------
+export PROTON_BRIDGE_USER="you@proton.me"
+export PROTON_MAIL_FROM="you@proton.me"
+export PROTON_BRIDGE_HOST="127.0.0.1"
+export PROTON_BRIDGE_IMAP_PORT="1143"
+export PROTON_BRIDGE_SMTP_PORT="1025"
+export PROTON_BRIDGE_TLS_INSECURE="true"
+export MCP_TRANSPORT="stdio"
+
+# --- Resolve Bridge password from your secrets manager -----------------------
+# The Bridge password is NEVER stored here. Fetch it just-in-time from your
+# preferred secrets manager CLI (Proton Pass, Bitwarden, 1Password, pass-store,
+# gopass, etc.) and export it.
+#
+# Example placeholders (uncomment the one that matches your secrets manager):
+#
+# export PROTON_BRIDGE_PASS="$(bw get password protonmail-bridge)"
+# export PROTON_BRIDGE_PASS="$(op read 'op://vault/item/bridge-password')"
+# export PROTON_BRIDGE_PASS="$(pass show protonmail/bridge-password)"
+# export PROTON_BRIDGE_PASS="$(gopass show protonmail/bridge-password)"
+# export PROTON_BRIDGE_PASS="$(protonpass-cli get protonmail/bridge-password)"
+
+# If the secrets manager uses an env-file, create it ephemerally:
+# ENV_FILE="$(mktemp)"
+# trap 'rm -f "$ENV_FILE"' EXIT
+# chmod 600 "$ENV_FILE"
+# {
+#   echo "PROTON_BRIDGE_USER=${PROTON_BRIDGE_USER}"
+#   echo "PROTON_BRIDGE_PASS=$(tu-secret-manager read protonmail/bridge-password)"
+# } > "$ENV_FILE"
+
+# --- stdout must stay clean (only JSON-RPC); logs go to stderr --------------
+echo "protonmail-mcp wrapper: launching MCP server over stdio..." >&2
+
+# --- Launch the server -------------------------------------------------------
+# `exec` replaces the shell so stdout reaches the MCP client unchanged.
+exec npx -y @alexendros/protonmail-mcp
+
+# Alternative: if you run a local checkout, build first and then:
+# exec node /ruta/absoluta/a/protonmailbrige-mcptool/dist/index.js

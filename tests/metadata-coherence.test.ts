@@ -1,14 +1,11 @@
 /**
- * Gate vivo de coherencia de metadatos entre los tres manifiestos publicables:
+ * Gate vivo de coherencia de metadatos entre los manifiestos publicables:
  *  - package.json (npm)
- *  - server.json (MCP registry, campo raíz + packages[0])
- *  - plugins/.../plugin.json (plugin de Claude Code)
+ *  - server.json (MCP registry)
+ *  - README.md (no referencias prohibidas a clientes específicos)
  *
- * Si alguien desincroniza una versión o deja una env var del plugin huérfana
- * (sin correspondencia en server.json), este test falla. Las env vars secret
- * de server.json se permiten EXPUESTAS en el plugin (documentadas), pero toda
- * var REQUIRED no-secret de server.json DEBE estar presente en el userConfig
- * del plugin para que el instalador sepa qué necesita.
+ * Si alguien desincroniza una versión, deja una URL antigua o reintroduce
+ * referencias exclusivas a un cliente de IA, este test falla.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -26,30 +23,36 @@ function readJson(rel: string): Record<string, unknown> {
   >;
 }
 
+function readText(rel: string): string {
+  return readFileSync(resolve(root, rel), "utf8");
+}
+
 const pkg = readJson("package.json");
 const server = readJson("server.json");
-const plugin = readJson("plugins/protonmail-mcp/.claude-plugin/plugin.json");
-
-interface ServerEnvVar {
-  name: string;
-  isRequired?: boolean;
-  isSecret?: boolean;
-}
 
 const serverPackages = server.packages as Array<Record<string, unknown>>;
 const serverPkg0 = serverPackages[0]!;
-const serverEnv = serverPkg0.environmentVariables as ServerEnvVar[];
-const userConfig = plugin.userConfig as Record<
-  string,
-  { required?: boolean; sensitive?: boolean }
->;
+
+const forbidden = /claude|anthropic|claudecode|dokploy/i;
+
+const publicDocs = [
+  "README.md",
+  "docs/human-quickstart.md",
+  "docs/agent-quickstart.md",
+  "docs/bridge-core.md",
+  "docs/local-stdio-secrets.md",
+  "docs/deployment-http-docker.md",
+  "ARCHITECTURE.md",
+  "SECURITY.md",
+  "CONTRIBUTING.md",
+  "SUPPORT.md",
+];
 
 describe("metadata coherence · version", () => {
-  it("package.json, server.json (root + packages[0]) and plugin.json share the same version", () => {
+  it("package.json, server.json (root + packages[0]) share the same version", () => {
     const pkgVersion = pkg.version as string;
     expect(server.version).toBe(pkgVersion);
     expect(serverPkg0.version).toBe(pkgVersion);
-    expect(plugin.version).toBe(pkgVersion);
   });
 
   it("the runtime VERSION constant is the single source derived from package.json", () => {
@@ -57,39 +60,27 @@ describe("metadata coherence · version", () => {
   });
 });
 
-describe("metadata coherence · env vars", () => {
-  const serverNames = new Set(serverEnv.map((v) => v.name));
+describe("metadata coherence · repository", () => {
+  it("package.json and server.json point to the same repository", () => {
+    const pkgRepo = (pkg.repository as { url: string }).url;
+    const serverRepo = (server.repository as { url: string }).url;
+    const normalize = (url: string) =>
+      url.replace(/^git\+/, "").replace(/\.git$/, "");
+    expect(normalize(pkgRepo)).toBe(normalize(serverRepo));
+    expect(pkgRepo).toMatch(/protonmailbrige-mcptool/);
+  });
+});
 
-  it("every plugin userConfig var exists in server.json environmentVariables", () => {
-    for (const name of Object.keys(userConfig)) {
-      expect(
-        serverNames,
-        `plugin var ${name} missing from server.json`,
-      ).toContain(name);
+describe("metadata coherence · no exclusive client references", () => {
+  it("public docs do not contain references to Claude, Anthropic or the old repo name", () => {
+    for (const doc of publicDocs) {
+      const text = readText(doc);
+      expect(forbidden.test(text), `found forbidden reference in ${doc}`).toBe(false);
     }
   });
 
-  it("no REQUIRED non-secret server var is absent from the plugin userConfig", () => {
-    const requiredNonSecret = serverEnv
-      .filter((v) => v.isRequired && !v.isSecret)
-      .map((v) => v.name);
-    for (const name of requiredNonSecret) {
-      expect(
-        Object.keys(userConfig),
-        `required non-secret server var ${name} missing from plugin userConfig`,
-      ).toContain(name);
-    }
-  });
-
-  it("PROTON_BRIDGE_PASS is present and flagged sensitive in the plugin (secret, documented)", () => {
-    expect(userConfig.PROTON_BRIDGE_PASS).toBeDefined();
-    expect(userConfig.PROTON_BRIDGE_PASS?.sensitive).toBe(true);
-    expect(userConfig.PROTON_BRIDGE_PASS?.required).toBe(true);
-  });
-
-  it("MCP_TRANSPORT is intentionally NOT exposed (plugin is always stdio)", () => {
-    // The plugin's .protonmail-mcp_claude_mcp.json hardcodes MCP_TRANSPORT=stdio,
-    // so surfacing it as a user-tunable would only mislead. Documented omission.
-    expect(Object.keys(userConfig)).not.toContain("MCP_TRANSPORT");
+  it("package.json does not contain exclusive client keywords", () => {
+    const keywords = pkg.keywords as string[];
+    expect(keywords.some((k) => forbidden.test(k))).toBe(false);
   });
 });

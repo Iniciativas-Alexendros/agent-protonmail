@@ -18,11 +18,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode.git"
+    "url": "git+https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool.git"
   },
-  "homepage": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode#readme",
+  "homepage": "https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool#readme",
   "bugs": {
-    "url": "https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/issues"
+    "url": "https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/issues"
   },
   "keywords": [
     "mcp",
@@ -31,8 +31,9 @@
     "proton-bridge",
     "imap",
     "smtp",
-    "anthropic",
-    "claude"
+    "email",
+    "ai-agent",
+    "agent-tool"
   ],
   "scripts": {
     "build": "tsc",
@@ -49,11 +50,11 @@
     "license-check:prod": "license-checker --direct --production --onlyAllow 'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;MIT-0;(MIT OR EUPL-1.1+)'"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.19.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.4.1",
-    "imapflow": "^1.0.189",
-    "mailparser": "^3.7.2",
+    "imapflow": "^1.4.3",
+    "mailparser": "^3.9.12",
     "nodemailer": "^9.0.1",
     "zod": "^4.3.6"
   },
@@ -61,17 +62,17 @@
     "nodemailer": "^9.0.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/mailparser": "^3.4.5",
-    "@types/node": "^26.0.0",
-    "@types/nodemailer": "^8.0.0",
+    "@types/express": "^5.0.6",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/supertest": "^7.2.0",
     "license-checker": "^25.0.1",
-    "supertest": "^7.0.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "supertest": "^7.2.2",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

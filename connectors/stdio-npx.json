@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "protonmail": {
+      "command": "npx",
+      "args": ["-y", "@alexendros/protonmail-mcp"],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "PROTON_BRIDGE_USER": "you@proton.me",
+        "PROTON_BRIDGE_PASS": "your-bridge-password",
+        "PROTON_MAIL_FROM": "you@proton.me",
+        "PROTON_BRIDGE_HOST": "127.0.0.1",
+        "PROTON_BRIDGE_IMAP_PORT": "1143",
+        "PROTON_BRIDGE_SMTP_PORT": "1025",
+        "PROTON_BRIDGE_TLS_INSECURE": "true"
+      }
+    }
+  }
+}
