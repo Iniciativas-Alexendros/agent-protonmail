@@ -5,6 +5,26 @@ All notable changes to `@alexendros/protonmail-mcp` (renamed back from `@alexend
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Agnosticismo de agente IA.** Eliminadas todas las referencias exclusivas a Claude Code/Anthropic del README, docs y metadatos. El paquete sigue publicado como `@alexendros/protonmail-mcp` y el `mcpName` como `io.github.Alexendros/protonmail-mcp`.
+- **README reestructurado.** De 501 líneas a ~130, con quickstart de 5 minutos, tablas de documentación y enlaces a `docs/human-quickstart.md`, `docs/agent-quickstart.md`, `connectors/` y `playbooks/`.
+- **Stack estabilizado.** Node ≥ 22 LTS, TypeScript 5.7, `@types/node` 22, Vitest 3.x, MCP SDK 1.29, Dockerfile `node:22-alpine`.
+
+### Added
+
+- **`connectors/`** — ejemplos de configuración stdio y HTTP genéricos para cualquier cliente MCP.
+- **`playbooks/`** — workflows agnósticos de triaje, respuesta/organización y checklist de puesta en marcha.
+- **`docs/human-quickstart.md`** y **`docs/agent-quickstart.md`** — guías separadas para usuarios humanos y agentes IA.
+- **Test de coherencia de metadatos** (`tests/metadata-coherence.test.ts`) verifica que no se reintroduzcan referencias a clientes específicos en los docs públicos.
+
+### Removed
+
+- **Plugin de Claude Code** (`plugins/protonmail-mcp/`, `.claude-plugin/`). El MCP ahora se consume mediante el formato `mcpServers` estándar.
+- **`docker-compose.coolify.yml`** y referencias a Dokploy en la documentación; el despliegue Docker es ahora genérico para cualquier reverse proxy.
+
 ## [0.4.0] - 2026-06-20
 
 ### Fixed
@@ -35,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`docs/bridge-core.md`** — full guide to the headless `protonmail-bridge-core` package (headless vs GUI AUR install, `--cli` login/2FA flow, obtaining the bridge password with `info`, IMAP/SMTP ports, keychain persistence via gnome-keyring/secret-service, and troubleshooting including `ss -ltn | grep 1143`, bootstrap WARN noise, and bridge-password reconciliation after re-login).
-- **`docs/local-stdio-secrets.md`** — the secure stdio configuration pattern: why `PROTON_BRIDGE_PASS` must not live in clear text in `mcp.json`, registering a wrapper script as the MCP `command`, just-in-time secret resolution by `pass://<share-id>/<item-id>/<campo>` pointer, clean stdout (logs to stderr), and ephemeral env-file via `mktemp` + `trap`. Includes a complete placeholder wrapper; references the template at `plugins/protonmail-mcp/scripts/protonmail-mcp-stdio.sh.example`.
+- **`docs/local-stdio-secrets.md`** — the secure stdio configuration pattern: why `PROTON_BRIDGE_PASS` must not live in clear text in the client config, registering a wrapper script as the MCP `command`, just-in-time secret resolution, clean stdout (logs to stderr), and ephemeral env-file via `mktemp` + `trap`. Includes a complete placeholder wrapper; references the template at `connectors/stdio-wrapper.sh.example`.
 - **`docs/deployment-http-docker.md`** — the HTTP/Docker/Dokploy deployment content retired from the README (advanced mode): the two images (`Dockerfile` + `Dockerfile.bridge`), `docker-compose` with internal network + Traefik, HTTP env vars (`MCP_AUTH_TOKEN` via `openssl rand -hex 32`, `MCP_ALLOWED_ORIGINS`, `LOG_LEVEL`), the `NODE_ENV=production` refusal to start with an empty allowlist, one-off Bridge login inside the container, `/healthz` and `/mcp` verification, and registration as a Remote MCP Server in Claude Routines.
 - **Triage skill documentation** — documented the mail-triage skill that drives inbox review/cleanup through the MCP over the local Bridge IMAP.
 - **Installable Claude Code plugin** — the project is now packaged as an installable Claude Code plugin (`plugins/protonmail-mcp/`), bundling the stdio wrapper template and MCP registration.
@@ -112,7 +132,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@alexendros/protonmail-mcp` (old npm name) deprecated with `npm deprecate` pointing to the new package.
 
-[0.2.0]: https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/releases/tag/v0.2.0
-[0.1.2]: https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/releases/tag/v0.1.2
-[0.1.1]: https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/releases/tag/v0.1.1
-[0.1.0]: https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.4.0
+[0.2.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.2.0
+[0.1.2]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.2
+[0.1.1]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.1
+[0.1.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.0

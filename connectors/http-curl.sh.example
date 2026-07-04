@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# HTTP MCP handshake example for protonmail-mcp
+#
+# This script performs a minimal MCP initialize handshake against a remote
+# protonmail-mcp HTTP endpoint. It stores the returned Mcp-Session-Id and uses
+# it to call tools/list. Adapt it to your deployment URL and token.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+MCP_URL="${MCP_URL:-https://tu-dominio.example/mcp}"
+TOKEN="${MCP_AUTH_TOKEN:-}"
+ORIGIN="${MCP_ORIGIN:-https://tu-dashboard.example}"
+
+if [[ -z "$TOKEN" ]]; then
+  echo "Set MCP_AUTH_TOKEN to the remote bearer token." >&2
+  exit 1
+fi
+
+INIT=$(curl -sS -D - -X POST "$MCP_URL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Origin: $ORIGIN" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-06-18",
+      "capabilities": {},
+      "clientInfo": { "name": "curl-example", "version": "1.0.0" }
+    }
+  }')
+
+SESSION_ID=$(echo "$INIT" | grep -i "^mcp-session-id:" | awk '{print $2}' | tr -d '\r')
+
+if [[ -z "$SESSION_ID" ]]; then
+  echo "Failed to obtain Mcp-Session-Id" >&2
+  echo "$INIT" >&2
+  exit 1
+fi
+
+echo "Session: $SESSION_ID"
+
+curl -sS -X POST "$MCP_URL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Origin: $ORIGIN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | jq .

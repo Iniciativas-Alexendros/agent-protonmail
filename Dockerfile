@@ -1,5 +1,5 @@
 # ---- Builder ----
-FROM node:26-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund
@@ -8,14 +8,14 @@ COPY src ./src
 RUN npm run build
 
 # ---- Runtime ----
-FROM node:26-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=builder /app/dist ./dist
 
-# Listen on all interfaces inside the container (network policy is enforced by Dokploy/reverse proxy)
+# Listen on all interfaces inside the container (network policy is enforced by the reverse proxy)
 ENV MCP_HTTP_HOST=0.0.0.0
 ENV MCP_HTTP_PORT=8787
 ENV MCP_TRANSPORT=http

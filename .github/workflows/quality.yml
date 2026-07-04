@@ -3,7 +3,6 @@ name: Quality
 # Homogeneización del repo consumiendo plantillas reusables de Alexendros/plantillas.
 #   - detect:       descubre el stack del repo (composite action).
 #   - lint:         gitleaks + markdownlint + lychee + actionlint/zizmor + linters de stack.
-#   - plugin-json:  valida sintaxis JSON de los manifests del plugin.
 #   - supply-chain: SBOM (CycloneDX/syft) + attest-build-provenance.
 
 on:
@@ -80,32 +79,6 @@ jobs:
       has_docker: ${{ needs.detect.outputs.has_docker }}
       has_markdown: ${{ needs.detect.outputs.has_markdown }}
       has_shell: ${{ needs.detect.outputs.has_shell }}
-
-  # ────────────────────────────────────────────────────────────────────
-  # Validez sintáctica de los manifests JSON del plugin.
-  # El test tests/metadata-coherence.test.ts (ci.yml) cubre coherencia;
-  # esto cubre solo que parsean. Falla si alguno no es JSON válido.
-  # ────────────────────────────────────────────────────────────────────
-  plugin-json:
-    name: Plugin JSON syntax
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - name: Parse plugin JSON manifests
-        run: |
-          set -euo pipefail
-          for f in \
-            .claude-plugin/marketplace.json \
-            plugins/protonmail-mcp/.claude-plugin/plugin.json \
-            plugins/protonmail-mcp/.protonmail-mcp_claude_mcp.json \
-            server.json; do
-            echo "Parsing $f"
-            node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f"
-          done
 
   # ────────────────────────────────────────────────────────────────────
   # Supply chain · SBOM (siempre) + provenance attestation.

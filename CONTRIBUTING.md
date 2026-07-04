@@ -1,81 +1,81 @@
-# Contributing to `@alexendros/protonmail-mcp`
+# Contribuir a `@alexendros/protonmail-mcp`
 
-Thanks for thinking about contributing. This is a small, focused project — its scope is intentionally narrow ("expose Proton Mail capabilities to MCP clients **through Bridge**, never around it"). Reading this once will save us both round-trips.
+Gracias por considerar contribuir. Este es un proyecto pequeño y enfocado: su alcance es exponer las capacidades de Proton Mail a clientes MCP **a través de Bridge**, nunca por otros caminos.
 
-> 🔒 **Security?** Do NOT open a public issue or PR. Email **security@alexendros.me** or use [GitHub Security Advisories](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/security/advisories/new). See [SECURITY.md](./SECURITY.md) for the full threat model.
+> 🔒 **Seguridad:** NO abras una issue o PR pública. Escribe a **security@alexendros.me** o usa [GitHub Security Advisories](https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/security/advisories/new). Ver [SECURITY.md](./SECURITY.md) para el threat model completo.
 
-## Ways to contribute
+## Formas de contribuir
 
-- **🐛 Report a bug** — use the [Bug report template](./.github/ISSUE_TEMPLATE/bug-report.yml). Include version, transport, Node, OS, repro steps.
-- **💡 Propose a feature** — use the [Feature request template](./.github/ISSUE_TEMPLATE/feature-request.yml). Be concrete (tool name, inputs, outputs). Bridge-only scope, no direct Proton web API calls.
-- **💬 Ask a question** — use [Discussions](https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode/discussions), not the issue tracker.
-- **🧑‍💻 Send a patch** — see "Pull request workflow" below.
+- **🐛 Reportar un bug** — usa la [plantilla de bug](./.github/ISSUE_TEMPLATE/bug-report.yml). Incluye versión, transporte, Node, SO y pasos de reproducción.
+- **💡 Proponer una feature** — usa la [plantilla de feature](./.github/ISSUE_TEMPLATE/feature-request.yml). Sé concreto: nombre de tool, inputs, outputs. El alcance es siempre a través de Bridge; no uses la API web directa de Proton.
+- **💬 Preguntar** — usa [Discussions](https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/discussions), no el issue tracker.
+- **🧑‍💻 Enviar un patch** — lee el workflow de PR abajo.
 
-## Pull request workflow
+## Workflow de pull request
 
-1. **Find or open an issue first.** PRs without a linked issue may be closed. Discuss the approach before writing code, especially for new tools or breaking changes.
-2. **Fork + branch.** Branch naming: `feat/<short-slug>`, `fix/<short-slug>`, `docs/<short-slug>`, `chore/<short-slug>`.
-3. **Develop.** Follow the checklist in the [PR template](./.github/PULL_REQUEST_TEMPLATE.md).
-4. **Open the PR** against `main`. Fill in the template completely.
-5. **Iterate.** Maintainer review usually within a week. Be ready to rebase on `main` rather than merge.
-6. **Merge.** Squash-merge by default. The maintainer handles the merge once CI is green and review is approved.
+1. **Abre o enlaza una issue primero.** PRs sin issue asociada pueden cerrarse.
+2. **Fork + rama.** Nombres: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
+3. **Desarrolla.** Sigue la checklist de la [plantilla de PR](./.github/PULL_REQUEST_TEMPLATE.md).
+4. **Abre el PR** contra `main` y rellena la plantilla.
+5. **Itera.** Revisión normalmente en una semana. Rebase sobre `main` en lugar de merge.
+6. **Merge.** Squash-merge por defecto una vez CI verde y revisión aprobada.
 
-## Local development
+## Desarrollo local
 
-Requires Node ≥ 20 and a Proton Mail Bridge running locally (or in Docker).
+Requiere Node ≥ 22 y Proton Mail Bridge corriendo en local (o en Docker).
 
 ```bash
 # 1. Clone + install
-git clone https://github.com/Iniciativas-Alexendros/plugin-protonmail-claudecode.git
-cd protonmail-mcp
+git clone https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool.git
+cd protonmailbrige-mcptool
 npm install
 
-# 2. Configure environment
+# 2. Configura entorno
 cp .env.example .env
-# Fill PROTON_BRIDGE_USER / PROTON_BRIDGE_PASS at minimum.
+# Rellena PROTON_BRIDGE_USER y PROTON_BRIDGE_PASS como mínimo.
 
-# 3. Build + verify
+# 3. Build + verifica
 npm run build         # tsc → dist/
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (39 tests)
-npm run smoke         # end-to-end smoke against the running Bridge
+npm test              # vitest run
+npm run smoke         # smoke stdio
 
-# 4. Run locally
-npm start             # stdio transport
-# or
-PORT=3000 node dist/index.js  # HTTP transport on :3000
+# 4. Ejecuta localmente
+npm start             # transporte stdio
+# o
+PORT=3000 node dist/index.js  # transporte HTTP en :3000
 ```
 
-For HTTP development, the [MCP inspector](https://github.com/modelcontextprotocol/inspector) is your friend:
+Para depurar HTTP, el [MCP inspector](https://github.com/modelcontextprotocol/inspector) es útil:
 
 ```bash
 npm run inspect
 ```
 
-## Coding conventions
+## Convenciones de código
 
-- **Language:** TypeScript strict (`"strict": true`). No new `any` without a comment explaining why.
-- **Modules:** ES Modules (`"type": "module"`). Use named exports.
-- **Error handling:** validate at boundaries with Zod (`src/config.ts` is the reference). Never swallow errors silently — log to stderr and rethrow or return a typed error.
-- **Logging:** stderr only. The stdio transport reserves stdout for protocol traffic. Use the existing logger pattern in `src/config.ts`.
-- **Tests:** Vitest. Add tests in `tests/`. Mirror the file layout (`src/foo.ts` → `tests/foo.test.ts`). Tests must be deterministic — no real network, no real Bridge in unit tests.
+- **Lenguaje:** TypeScript strict (`"strict": true`). Sin `any` nuevo sin comentario justificando.
+- **Módulos:** ES Modules (`"type": "module"`). Usa named exports.
+- **Manejo de errores:** valida en los boundaries con Zod (`src/config.ts` es la referencia). Nunca tragues errores en silencio: log a stderr y relanza o devuelve un error tipado.
+- **Logging:** stderr only. El transporte stdio reserva stdout para el protocolo. Usa el logger existente en `src/config.ts`.
+- **Tests:** Vitest. Añade tests en `tests/`. Refleja la estructura (`src/foo.ts` → `tests/foo.test.ts`). Deterministas: sin red real ni Bridge real en unit tests.
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) (`feat(imap):`, `fix(http):`, `chore(deps):`, `docs:`, `refactor:`, `test:`, `ci:`).
-- **Public API:** anything exported from `src/index.ts` or shipped in the MCP `tools/list` is public. Breaking changes require a SemVer major bump and a `BREAKING CHANGE:` footer in the commit.
+- **API pública:** todo lo exportado desde `src/index.ts` o registrado en `tools/list` es público. Cambios breaking requieren bump major de SemVer y un footer `BREAKING CHANGE:` en el commit.
 
-## Issue triage policy
+## Política de triaje de issues
 
-When you open an issue you'll see a `triage` label. The maintainer will:
+Al abrir una issue se añade la etiqueta `triage`. El mantenedor:
 
-- **Within 7 days:** acknowledge, ask for clarification, or label with severity (`critical` / `bug` / `enhancement` / `wontfix` / `duplicate`).
-- **Critical bugs (data loss, auth bypass, secret leak):** patched ASAP, hotfix release.
-- **Bugs:** scheduled for the next minor release.
-- **Features:** evaluated against scope; may be deferred or declined with explanation.
-- **Stale issues:** issues without a response from the reporter for 30 days may be closed with a `stale` label. Comment to reopen.
+- **En 7 días:** reconocer, pedir aclaración o etiquetar severidad (`critical` / `bug` / `enhancement` / `wontfix` / `duplicate`).
+- **Bugs críticos** (data loss, auth bypass, secret leak): parche ASAP y hotfix release.
+- **Bugs:** planificados para la siguiente minor release.
+- **Features:** evaluadas contra el alcance; pueden aplazarse o rechazarse con explicación.
+- **Issues stale:** sin respuesta del reportero en 30 días pueden cerrarse con etiqueta `stale`. Comenta para reabrir.
 
-## Code of Conduct
+## Código de conducta
 
-Participation is governed by the [Contributor Covenant](./CODE_OF_CONDUCT.md). Violations: report to **conduct@alexendros.me**.
+La participación se rige por el [Contributor Covenant](./CODE_OF_CONDUCT.md). Violaciones: reportar a **conduct@alexendros.me**.
 
-## License
+## Licencia
 
-By submitting a PR you agree that your contribution is licensed under the [MIT License](./LICENSE) of this repository.
+Al enviar un PR aceptas que tu contribución se licencia bajo la [MIT License](./LICENSE) de este repositorio.

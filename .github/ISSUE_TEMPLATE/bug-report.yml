@@ -24,8 +24,8 @@ body:
     attributes:
       label: Transport in use
       options:
-        - stdio (CLI / Claude Desktop config)
-        - HTTP (Streamable, claude.ai Routines / SDK)
+        - stdio (local MCP client)
+        - HTTP (remote MCP client / backend)
         - both
         - not sure
     validations:
@@ -35,7 +35,7 @@ body:
     id: node
     attributes:
       label: Node.js version
-      description: Output of `node --version`. Minimum supported is 20.
+      description: Output of `node --version`. Minimum supported is 22.
       placeholder: "v22.10.0"
     validations:
       required: true
@@ -51,7 +51,7 @@ body:
     id: os
     attributes:
       label: OS / container runtime
-      description: e.g. "Fedora Silverblue 43 + podman 5.8", "Ubuntu 24.04 + Docker 27", "Dokploy on VPS".
+      description: e.g. "Fedora Silverblue 43 + podman 5.8", "Ubuntu 24.04 + Docker 27", "Ubuntu 22.04 + systemd".
       placeholder: "Fedora 43 + podman 5.8"
     validations:
       required: true

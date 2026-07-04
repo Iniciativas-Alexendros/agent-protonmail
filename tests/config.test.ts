@@ -47,11 +47,11 @@ describe("loadConfig · Zod env validation", () => {
     process.env.PROTON_BRIDGE_USER = "a@b.com";
     process.env.PROTON_BRIDGE_PASS = "x";
     process.env.PROTON_MAIL_FROM = "a@b.com";
-    process.env.MCP_ALLOWED_ORIGINS = "https://claude.ai, https://control.alexendros.me";
+    process.env.MCP_ALLOWED_ORIGINS = "https://agent.example, https://dashboard.example";
     const cfg = loadConfig();
     expect(cfg.transport.allowedOrigins).toEqual([
-      "https://claude.ai",
-      "https://control.alexendros.me",
+      "https://agent.example",
+      "https://dashboard.example",
     ]);
   });
 

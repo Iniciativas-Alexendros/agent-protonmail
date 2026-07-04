@@ -69,7 +69,7 @@ describe("HTTP transport · auth and session lifecycle", () => {
   it("POST /mcp with disallowed Origin returns 403", async () => {
     const app = buildHttpApp({
       buildServer: miniServer,
-      cfg: cfg({ allowedOrigins: ["https://claude.ai"] }),
+      cfg: cfg({ allowedOrigins: ["https://agent.example"] }),
       log: silent,
     });
     const res = await request(app)
