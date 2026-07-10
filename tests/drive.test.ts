@@ -60,3 +60,50 @@ describe('DriveClient', () => {
     expect(result.error).toContain('not found')
   })
 })
+
+describe('DriveClient sync', () => {
+  it('should return error on syncPull when no remote configured', async () => {
+    const dc = new DriveClient(
+      {
+        stagingDir: '/tmp/test-drive',
+        syncMode: 'pull',
+        rcloneBin: 'rclone',
+        obsoleteExtensions: [],
+      },
+      { debug: () => {}, info: () => {}, error: () => {} },
+    )
+    const result = await dc.syncPull()
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('not set')
+  })
+
+  it('should return error on syncPush when no remote configured', async () => {
+    const dc = new DriveClient(
+      {
+        stagingDir: '/tmp/test-drive',
+        syncMode: 'pull',
+        rcloneBin: 'rclone',
+        obsoleteExtensions: [],
+      },
+      { debug: () => {}, info: () => {}, error: () => {} },
+    )
+    const result = await dc.syncPush()
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('not set')
+  })
+
+  it('should report status without remote', async () => {
+    const dc = new DriveClient(
+      {
+        stagingDir: '/tmp/test-drive',
+        syncMode: 'pull',
+        rcloneBin: 'rclone',
+        obsoleteExtensions: [],
+      },
+      { debug: () => {}, info: () => {}, error: () => {} },
+    )
+    const result = await dc.status()
+    expect(result.configured).toBe(false)
+    expect(result.ok).toBe(false)
+  })
+})
