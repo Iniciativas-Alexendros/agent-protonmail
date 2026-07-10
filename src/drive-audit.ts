@@ -76,8 +76,10 @@ export class DriveAuditor {
               modified: s.mtime,
             })
           }
-        } catch {
-          /* skip */
+        } catch (err) {
+          this.log.error(`drive-audit: skip ${full}`, {
+            error: (err as Error).message,
+          })
         }
       }
     }
@@ -107,10 +109,14 @@ export class DriveAuditor {
             if (!hashMap.has(hash)) {
               hashMap.set(hash, { hash, size: s.size, files: [] })
             }
-            hashMap.get(hash)!.files.push({ path: full, name: entry })
+            hashMap
+              .get(hash)!
+              .files.push({ path: relative(stagingDir, full), name: entry })
           }
-        } catch {
-          /* skip */
+        } catch (err) {
+          this.log.error(`drive-audit: skip ${full}`, {
+            error: (err as Error).message,
+          })
         }
       }
     }
