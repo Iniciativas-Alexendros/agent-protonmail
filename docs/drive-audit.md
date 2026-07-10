@@ -68,13 +68,13 @@ AGENT_DRY_RUN=false npm run agent:drive-organize
 
 Estas tools se registran en `tools/list` únicamente cuando `DRIVE_RCLONE_REMOTE` está definido. Aceptan `response_format: "markdown" | "json"` (salvo `proton_drive_sync` y `proton_drive_organize`).
 
-| Tool                         | Tipo  | Descripción                                                                                                                                       |
-| ---------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `proton_drive_audit`         | read  | Escanea el staging y devuelve: total de archivos, por tipo/tamaño, duplicados (hash SHA-256) y formatos obsoletos. Acepta `staging_dir` opcional. |
-| `proton_drive_status`        | read  | Estado de sincronización: remote alcanzable, modo, existencia y tamaño del staging.                                                               |
-| `proton_drive_organize`      | write | Analiza el staging y mueve archivos a una estructura por tipo. **Dry-run por defecto** (`dry_run: true`).                                         |
-| `proton_drive_format_report` | read  | Reporte detallado de formatos: extensiones, sin extensión y archivos obsoletos. Acepta `staging_dir` opcional.                                    |
-| `proton_drive_sync`          | write | Dispara `rclone sync`. `direction: pull                                                                                                           | push | both`(default`pull`). Idempotente. |
+| Tool                         | Tipo  | Descripción                                                                                                                                                                     |
+| ---------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `proton_drive_audit`         | read  | Escanea el staging y devuelve: total de archivos, recuento por tipo (extensión) y bytes totales, duplicados (hash SHA-256) y formatos obsoletos. Acepta `staging_dir` opcional. |
+| `proton_drive_status`        | read  | Estado de sincronización: remote alcanzable, modo, existencia y tamaño del staging.                                                                                             |
+| `proton_drive_organize`      | write | Analiza el staging y mueve archivos a una estructura por tipo. **Dry-run por defecto** (`dry_run: true`).                                                                       |
+| `proton_drive_format_report` | read  | Reporte detallado de formatos: extensiones, sin extensión y archivos obsoletos. Acepta `staging_dir` opcional.                                                                  |
+| `proton_drive_sync`          | write | Dispara `rclone sync`. `direction: pull                                                                                                                                         | push | both`(default`pull`). Idempotente. |
 
 Ejemplo de llamada (`proton_drive_organize` en dry-run, formato JSON):
 
@@ -135,7 +135,8 @@ npm run agent:drive-organize
 # Aplicar reestructuración en staging local
 AGENT_DRY_RUN=false npm run agent:drive-organize
 
-# Subir los cambios a Proton Drive
-npx protonsuite-agent protonsuite-mcp   # (desde el cliente MCP)
-# → proton_drive_sync { "direction": "push" }
+# Subir los cambios a Proton Drive (desde un cliente MCP, p. ej. Claude Desktop
+# o el transporte HTTP del server — NO desde el CLI del agente):
+# → tool: proton_drive_sync
+# → arguments: { "direction": "push" }
 ```
