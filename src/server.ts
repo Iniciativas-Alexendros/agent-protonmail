@@ -208,10 +208,7 @@ export function buildServer(
 
   let driveClient: DriveClient | undefined
   if (cfg.products.drive.rcloneRemote) {
-    driveClient = new DriveClient(
-      cfg.products.drive,
-      log,
-    )
+    driveClient = new DriveClient(cfg.products.drive, log)
   }
 
   return { server, imap, smtp, drive: driveClient }
@@ -1334,17 +1331,41 @@ export function buildServer(
         title: 'Proton Drive sync status',
         description:
           'Returns the current sync status of the Drive staging directory and rclone remote.',
+        inputSchema: {
+          response_format: z.enum(['markdown', 'json']).default('markdown'),
+        },
         annotations: {
           readOnlyHint: true,
           idempotentHint: true,
           openWorldHint: true,
         },
       },
-      async () => {
+      async ({ response_format }) => {
         try {
           const st = await driveClient.status()
+          if (response_format === 'json') {
+            return {
+              content: [{ type: 'text', text: JSON.stringify(st, null, 2) }],
+              structuredContent: st,
+            }
+          }
+          const lines = [
+            '# Proton Drive Status',
+            `- **Configured:** ${st.configured ? 'yes' : 'no'}`,
+            `- **Remote reachable:** ${st.remoteReachable === undefined ? 'n/a' : st.remoteReachable ? 'yes' : 'no'}`,
+            `- **Sync mode:** ${st.syncMode}`,
+            `- **Staging exists:** ${st.stagingExists ? 'yes' : 'no'}`,
+            st.stagingFiles !== undefined
+              ? `- **Staging files:** ${st.stagingFiles}`
+              : null,
+            st.stagingBytes !== undefined
+              ? `- **Staging bytes:** ${st.stagingBytes}`
+              : null,
+            st.error ? `- **Error:** ${st.error}` : null,
+          ].filter((x) => x !== null)
           return {
-            content: [{ type: 'text', text: JSON.stringify(st, null, 2) }],
+            content: [{ type: 'text', text: lines.join('\n') }],
+            structuredContent: st,
           }
         } catch (err) {
           return {
@@ -1434,6 +1455,7 @@ export function buildServer(
           'Detailed analysis of file formats in the staging directory.',
         inputSchema: {
           staging_dir: z.string().optional(),
+          response_format: z.enum(['markdown', 'json']).default('markdown'),
         },
         annotations: {
           readOnlyHint: true,
@@ -1441,14 +1463,37 @@ export function buildServer(
           openWorldHint: true,
         },
       },
-      async ({ staging_dir }) => {
+      async ({ staging_dir, response_format }) => {
         const staging = staging_dir
           ? resolve(staging_dir)
           : driveClient.stagingDir
         try {
           const fmt = await auditor.formatReport(staging)
+          if (response_format === 'json') {
+            return {
+              content: [{ type: 'text', text: JSON.stringify(fmt, null, 2) }],
+              structuredContent: fmt as unknown as Record<string, unknown>,
+            }
+          }
+          const lines = [
+            '# Proton Drive Format Report',
+            `- **Total extensions:** ${fmt.totalExtensions}`,
+            `- **Obsolete files:** ${fmt.obsoleteFiles.length}`,
+            `- **Files without extension:** ${fmt.noExtension}`,
+            '',
+            '## Extensions',
+            ...fmt.extensions.map((e) => `- \`${e || '(none)'}\``),
+            fmt.obsoleteFiles.length > 0
+              ? [
+                  '',
+                  '## Obsolete files',
+                  ...fmt.obsoleteFiles.map((f) => `- \`${f.path}\` (${f.ext})`),
+                ]
+              : [],
+          ].flat()
           return {
-            content: [{ type: 'text', text: JSON.stringify(fmt, null, 2) }],
+            content: [{ type: 'text', text: lines.join('\n') }],
+            structuredContent: fmt as unknown as Record<string, unknown>,
           }
         } catch (err) {
           return {
@@ -1613,11 +1658,7 @@ export function buildServer(
                   drive: cfg.products.drive.rcloneRemote
                     ? (() => {
                         try {
-                          new DriveClient(
-                            cfg.products
-                              .drive,
-                            log,
-                          )
+                          new DriveClient(cfg.products.drive, log)
                           return {
                             available: true,
                             rcloneRemote: cfg.products.drive.rcloneRemote,
