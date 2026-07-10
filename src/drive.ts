@@ -100,14 +100,15 @@ export class DriveClient {
     if (!existsSync(staging)) mkdirSync(staging, { recursive: true })
     try {
       this.log.info('drive syncPull', { remote: this.remotePrefix, staging })
-      const { stdout } = await this.execRclone([
+      const { stdout, stderr } = await this.execRclone([
         'sync',
         `${this.remotePrefix}/`,
         staging,
         '--progress',
         '--stats-one-line',
       ])
-      const files = /Transferred:\s+(\d+)/.exec(stdout)?.[1] ?? '0'
+      const out = stdout + stderr
+      const files = /Transferred:\s+(\d+)/.exec(out)?.[1] ?? '0'
       return { ok: true, files: parseInt(files, 10), bytes: 0 }
     } catch (err) {
       const msg = (err as Error).message
@@ -132,14 +133,16 @@ export class DriveClient {
     const staging = this.stagingDir
     try {
       this.log.info('drive syncPush', { remote: this.remotePrefix, staging })
-      const { stdout } = await this.execRclone([
+      const { stdout, stderr } = await this.execRclone([
         'sync',
         staging,
         `${this.remotePrefix}/`,
+        '--ignore-existing',
         '--progress',
         '--stats-one-line',
       ])
-      const files = /Transferred:\s+(\d+)/.exec(stdout)?.[1] ?? '0'
+      const out = stdout + stderr
+      const files = /Transferred:\s+(\d+)/.exec(out)?.[1] ?? '0'
       return { ok: true, files: parseInt(files, 10), bytes: 0 }
     } catch (err) {
       const msg = (err as Error).message

@@ -62,10 +62,10 @@ Añade este bloque a tu cliente MCP (formato genérico `mcpServers`):
         "PROTON_MAIL_FROM": "you@proton.me",
         "PROTON_BRIDGE_TLS_INSECURE": "true",
         "PROTON_PASS_ENABLED": "true",
-        "PROTON_PASS_STORE_DIR": "~/.password-store"
-      }
-    }
-  }
+        "PROTON_PASS_STORE_DIR": "~/.password-store",
+      },
+    },
+  },
 }
 ```
 
@@ -83,18 +83,18 @@ En modo `AGENT_DRY_RUN=true` (default), el agente analiza el buzón y presenta u
 
 ## Documentación
 
-| Documento | Para quién | Qué cubre |
-|---|---|---|
-| [`docs/human-quickstart.md`](./docs/human-quickstart.md) | Usuarios no técnicos | Instalación paso a paso, Bridge, Pass, primer uso, modo agente. |
-| [`docs/agent-quickstart.md`](./docs/agent-quickstart.md) | Agentes IA / desarrolladores | Cómo consumir las tools, formatos de respuesta, ejemplos. |
-| [`docs/bridge-core.md`](./docs/bridge-core.md) | Todos | `protonmail-bridge-core` headless, puertos, vault, troubleshooting. |
-| [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md) | Operadores | Wrapper stdio que no deja secretos en disco. |
-| [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) | DevOps | Despliegue HTTP con Docker, auth, allowlist, healthcheck. |
-| [`docs/alerting.md`](./docs/alerting.md) | Operadores | Configuración de alertas de contenido, webhook, logs. |
-| [`docs/knowledge-base.md`](./docs/knowledge-base.md) | Todos | Convenciones de clasificación y categorías profesionales. |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Desarrolladores | Capas internas, modelo de amenazas, decisiones. |
-| [`SECURITY.md`](./SECURITY.md) | Desarrolladores / auditores | Controles activos y threat model para agentes IA. |
-| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Contribuidores | Convenciones, PRs, tests, licencia AGPL-3.0. |
+| Documento                                                            | Para quién                   | Qué cubre                                                           |
+| -------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------- |
+| [`docs/human-quickstart.md`](./docs/human-quickstart.md)             | Usuarios no técnicos         | Instalación paso a paso, Bridge, Pass, primer uso, modo agente.     |
+| [`docs/agent-quickstart.md`](./docs/agent-quickstart.md)             | Agentes IA / desarrolladores | Cómo consumir las tools, formatos de respuesta, ejemplos.           |
+| [`docs/bridge-core.md`](./docs/bridge-core.md)                       | Todos                        | `protonmail-bridge-core` headless, puertos, vault, troubleshooting. |
+| [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md)       | Operadores                   | Wrapper stdio que no deja secretos en disco.                        |
+| [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) | DevOps                       | Despliegue HTTP con Docker, auth, allowlist, healthcheck.           |
+| [`docs/alerting.md`](./docs/alerting.md)                             | Operadores                   | Configuración de alertas de contenido, webhook, logs.               |
+| [`docs/knowledge-base.md`](./docs/knowledge-base.md)                 | Todos                        | Convenciones de clasificación y categorías profesionales.           |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md)                               | Desarrolladores              | Capas internas, modelo de amenazas, decisiones.                     |
+| [`SECURITY.md`](./SECURITY.md)                                       | Desarrolladores / auditores  | Controles activos y threat model para agentes IA.                   |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md)                               | Contribuidores               | Convenciones, PRs, tests, licencia AGPL-3.0.                        |
 
 ## Conectores y playbooks
 
@@ -118,55 +118,75 @@ Todas las tools de lectura aceptan `response_format: "markdown" | "json"`. Organ
 
 ### Mail (14 tools)
 
-| Tool | Tipo | Descripción |
-|---|---|---|
-| `proton_list_folders` | read | Lista mailboxes (INBOX, Sent, Trash, labels, custom). |
-| `proton_create_folder` | write | Crea un mailbox nuevo. |
-| `proton_mailbox_status` | read | Contadores: total / unseen / recent. |
-| `proton_list_emails` | read | Lista paginada de mensajes recientes. |
-| `proton_search_emails` | read | Búsqueda con filtros combinables. |
-| `proton_get_email` | read | Mensaje completo: headers, cuerpo, adjuntos. |
-| `proton_get_attachment` | read | Adjunto en base64; `max_bytes` 10 MB default (cap 50 MB). |
-| `proton_send_email` | write | Envía texto/HTML + adjuntos. |
-| `proton_reply_email` | write | Responde preservando threading. |
-| `proton_forward_email` | write | Reenvía con adjuntos opcionales. |
-| `proton_flag_email` | write idempotent | read/unread/starred/unstarred/custom. |
-| `proton_move_email` | write | Mueve entre mailboxes por UID. |
-| `proton_delete_email` | destructive | `trash` (default) o `permanent`. |
+| Tool                    | Tipo             | Descripción                                               |
+| ----------------------- | ---------------- | --------------------------------------------------------- |
+| `proton_list_folders`   | read             | Lista mailboxes (INBOX, Sent, Trash, labels, custom).     |
+| `proton_create_folder`  | write            | Crea un mailbox nuevo.                                    |
+| `proton_mailbox_status` | read             | Contadores: total / unseen / recent.                      |
+| `proton_list_emails`    | read             | Lista paginada de mensajes recientes.                     |
+| `proton_search_emails`  | read             | Búsqueda con filtros combinables.                         |
+| `proton_get_email`      | read             | Mensaje completo: headers, cuerpo, adjuntos.              |
+| `proton_get_attachment` | read             | Adjunto en base64; `max_bytes` 10 MB default (cap 50 MB). |
+| `proton_send_email`     | write            | Envía texto/HTML + adjuntos.                              |
+| `proton_reply_email`    | write            | Responde preservando threading.                           |
+| `proton_forward_email`  | write            | Reenvía con adjuntos opcionales.                          |
+| `proton_flag_email`     | write idempotent | read/unread/starred/unstarred/custom.                     |
+| `proton_move_email`     | write            | Mueve entre mailboxes por UID.                            |
+| `proton_delete_email`   | destructive      | `trash` (default) o `permanent`.                          |
 
 ### Pass (4 tools)
 
-| Tool | Tipo | Descripción |
-|---|---|---|
-| `proton_pass_list` | read | Lista entradas del password store (solo nombres, nunca valores). |
-| `proton_pass_get` | read | Recupera un secreto y lo inyecta en el entorno — respuesta `{found:true}` sin el valor. |
-| `proton_pass_generate` | write | Genera contraseña segura y la guarda en el store. |
-| `proton_pass_health` | read | Verifica conectividad y estado del store. |
+| Tool                   | Tipo  | Descripción                                                                             |
+| ---------------------- | ----- | --------------------------------------------------------------------------------------- |
+| `proton_pass_list`     | read  | Lista entradas del password store (solo nombres, nunca valores).                        |
+| `proton_pass_get`      | read  | Recupera un secreto y lo inyecta en el entorno — respuesta `{found:true}` sin el valor. |
+| `proton_pass_generate` | write | Genera contraseña segura y la guarda en el store.                                       |
+| `proton_pass_health`   | read  | Verifica conectividad y estado del store.                                               |
 
 ### Suite (1 tool)
 
-| Tool | Tipo | Descripción |
-|---|---|---|
+| Tool                  | Tipo | Descripción                                                                         |
+| --------------------- | ---- | ----------------------------------------------------------------------------------- |
 | `proton_suite_status` | read | Estado unificado de todos los productos configurados (Mail, Pass, Calendar, Drive). |
 
-### Calendar y Drive (stubs — próximamente)
+### Calendar (stub — próximamente)
 
-Las tools `proton_calendar_*` y `proton_drive_*` están registradas y visibles en `tools/list`, pero devuelven `{available: false}` hasta que Proton exponga CalDAV vía Bridge y se complete la integración OAuth de Drive.
+Las tools `proton_calendar_*` están registradas y visibles en `tools/list`, pero devuelven `{available: false}` hasta que Proton exponga CalDAV vía Bridge.
+
+### Proton Drive (rclone)
+
+Auditoría y sincronización de Proton Drive vía rclone (staging local). Requiere la variable de entorno `DRIVE_RCLONE_REMOTE`. Para la configuración del remote y rclone, véase [`docs/drive-audit.md`](./docs/drive-audit.md).
+
+| Tool                         | Tipo  | Descripción                                                                                        |
+| ---------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
+| `proton_drive_audit`         | read  | Escanea el staging y devuelve inventario: total, por tipo/tamaño, duplicados y formatos obsoletos. |
+| `proton_drive_status`        | read  | Estado de sincronización del staging y del remote rclone.                                          |
+| `proton_drive_organize`      | write | Reorganiza el staging por tipo; dry-run por defecto.                                               |
+| `proton_drive_format_report` | read  | Análisis detallado de formatos de fichero en el staging.                                           |
+| `proton_drive_sync`          | write | Sincroniza el staging con ProtonDrive (pull por defecto; push manual).                             |
+
+Goals del agente:
+
+| Goal             | Script                         |
+| ---------------- | ------------------------------ |
+| `drive-audit`    | `npm run agent:drive-audit`    |
+| `drive-organize` | `npm run agent:drive-organize` |
+| `drive-sync`     | `npm run agent:drive-sync`     |
 
 ---
 
 ## Agente
 
-| Goal | Pipeline |
-|---|---|
-| `setup` | Verifica conectividad Bridge (IMAP + SMTP), envía email de prueba. |
-| `organize` | Analiza inbox, clasifica, propone carpetas/etiquetas, detecta amenazas. |
-| `monitor` | Igual que organize pero solo lectura — presenta alertas. |
-| `alert` | Inspecciona solo amenazas de seguridad. |
-| `pass-audit` | Audita fortaleza de contraseñas en el vault Pass, detecta duplicados y entradas sin rotación. |
-| `suite-status` | Reporte unificado de todos los productos configurados. |
-| `discover` | Check rápido de conectividad Bridge. |
-| `check-imap` | Solo verificación IMAP (sin enviar email). |
+| Goal           | Pipeline                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| `setup`        | Verifica conectividad Bridge (IMAP + SMTP), envía email de prueba.                            |
+| `organize`     | Analiza inbox, clasifica, propone carpetas/etiquetas, detecta amenazas.                       |
+| `monitor`      | Igual que organize pero solo lectura — presenta alertas.                                      |
+| `alert`        | Inspecciona solo amenazas de seguridad.                                                       |
+| `pass-audit`   | Audita fortaleza de contraseñas en el vault Pass, detecta duplicados y entradas sin rotación. |
+| `suite-status` | Reporte unificado de todos los productos configurados.                                        |
+| `discover`     | Check rápido de conectividad Bridge.                                                          |
+| `check-imap`   | Solo verificación IMAP (sin enviar email).                                                    |
 
 ---
 

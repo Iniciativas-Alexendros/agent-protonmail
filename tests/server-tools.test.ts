@@ -13,7 +13,18 @@
  * error" (JSON-RPC -32602). Por eso los casos inválidos se asertan vía
  * `expectValidationError`, no con `.rejects`.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  vi,
+  beforeAll,
+  afterAll,
+} from 'vitest'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // -----------------------------------------------------------------------------
 // Mock state, mutable per-test
@@ -675,4 +686,60 @@ describe('drive tools (registered)', () => {
     expect(sc.syncMode).toBe('pull')
     await client.close()
   })
+
+  // Temp staging dir exercised end-to-end by the handler tests below.
+  let stagingDir: string
+  beforeAll(() => {
+    stagingDir = mkdtempSync(join(tmpdir(), 'test-drive-handlers-'))
+    writeFileSync(join(stagingDir, 'README.md'), '# hi\n')
+    writeFileSync(join(stagingDir, 'notes.txt'), 'notes\n')
+  })
+  afterAll(() => {
+    rmSync(stagingDir, { recursive: true, force: true })
+  })
+
+  async function makeDriveClient() {
+    const { server } = buildServer(driveCfg, silentLog as never)
+    const client = new Client({ name: 'test', version: '1.0.0' })
+    const [clientT, serverT] = InMemoryTransport.createLinkedPair()
+    await Promise.all([server.connect(serverT), client.connect(clientT)])
+    return client
+  }
+
+  it('proton_drive_audit returns inventory over staging_dir', async () => {
+    const client = await makeDriveClient()
+    const res = await client.callTool({
+      name: 'proton_drive_audit',
+      arguments: { response_format: 'json', staging_dir: stagingDir },
+    })
+    expect(res.isError).not.toBe(true)
+    const sc = res.structuredContent as { totalFiles: number }
+    expect(sc.totalFiles).toBeGreaterThanOrEqual(1)
+    await client.close()
+  })
+
+  it('proton_drive_format_report returns extensions over staging_dir', async () => {
+    const client = await makeDriveClient()
+    const res = await client.callTool({
+      name: 'proton_drive_format_report',
+      arguments: { response_format: 'json', staging_dir: stagingDir },
+    })
+    expect(res.isError).not.toBe(true)
+    const sc = res.structuredContent as { extensions: unknown[] }
+    expect(Array.isArray(sc.extensions)).toBe(true)
+    await client.close()
+  })
+
+  it('proton_drive_organize dry-run returns a plan without moving', async () => {
+    const client = await makeDriveClient()
+    const res = await client.callTool({
+      name: 'proton_drive_organize',
+      arguments: { dry_run: true, staging_dir: stagingDir },
+    })
+    expect(res.isError).not.toBe(true)
+    await client.close()
+  })
+
+  // NOTE: proton_drive_sync is intentionally skipped — it requires a real
+  // rclone remote (DRIVE_RCLONE_REMOTE) and is exercised by the E2E suite.
 })
