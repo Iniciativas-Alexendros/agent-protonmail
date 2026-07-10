@@ -118,7 +118,6 @@ vi.mock("mailparser", () => ({
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { Config } from "../src/config.js";
-import { buildServer } from "../src/server.js";
 
 const cfg: Config = {
   products: {
@@ -591,3 +590,42 @@ describe("proton_delete_email", () => {
     });
   });
 });
+
+import { DriveClient, type DriveConfig } from '../src/drive.js'
+import { buildServer } from "../src/server.js";
+
+describe('drive tools', () => {
+  it('should create DriveClient with config', () => {
+    const cfg: DriveConfig = {
+      rcloneRemote: 'proton-drive:',
+      stagingDir: '/tmp/test-drive',
+      syncMode: 'pull',
+      rcloneBin: 'rclone',
+      obsoleteExtensions: ['.doc'],
+    }
+    const dc = new DriveClient(cfg, {
+      debug: () => {},
+      info: () => {},
+      error: () => {},
+    })
+    expect(dc.stagingDir).toBe('/tmp/test-drive')
+    expect(dc.remotePrefix).toBe('proton-drive:')
+  })
+
+  it('should return status without errors', async () => {
+    const cfg: DriveConfig = {
+      stagingDir: '/tmp/test-status',
+      syncMode: 'pull',
+      rcloneBin: 'rclone',
+      obsoleteExtensions: [],
+    }
+    const dc = new DriveClient(cfg, {
+      debug: () => {},
+      info: () => {},
+      error: () => {},
+    })
+    const st = await dc.status()
+    expect(st.configured).toBe(false)
+    expect(st.ok).toBe(false)
+  })
+})
