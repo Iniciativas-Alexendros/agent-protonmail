@@ -7,6 +7,7 @@ export type AgentGoal =
   | 'check-imap'
   | 'pass-audit'
   | 'suite-status'
+  | 'suite-manage'
   | 'drive-audit'
   | 'drive-organize'
   | 'drive-list'

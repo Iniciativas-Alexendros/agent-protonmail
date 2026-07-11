@@ -9,6 +9,7 @@ const ALLOWED_GOALS: AgentGoal[] = [
   'alert',
   'pass-audit',
   'suite-status',
+  'suite-manage',
   'drive-audit',
   'drive-organize',
   'drive-list',
@@ -54,6 +55,8 @@ export function describeGoal(goal: AgentGoal): string {
       'Audita el vault de Proton Pass: fortaleza de contraseñas, duplicados y rotación pendiente.',
     'suite-status':
       'Reporte unificado del estado de todos los productos configurados (Mail, Pass, Calendar, Drive).',
+    'suite-manage':
+      'Descubre, verifica y reporta el estado de todos los binarios del ecosistema Proton (Bridge, pass, proton-drive, gpg). Sugiere instalaci\u00f3n si faltan.',
     'drive-audit':
       'Escanea el staging de ProtonDrive: inventario, duplicados, formatos obsoletos. Read-only.',
     'drive-organize':

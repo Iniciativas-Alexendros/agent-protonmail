@@ -32,6 +32,10 @@ import { AlertSystem } from './alerts/index.js'
 import { type createLogger, type Config } from './config.js'
 import { DriveAuditor } from './drive-audit.js'
 import { DriveClient } from './drive.js'
+import { getBinaryInfo, REGISTRY } from './ecosystem/binaries.js'
+import { checkAllBinaries } from './ecosystem/discovery.js'
+import { buildInstallPlan } from './ecosystem/installer.js'
+import { checkUpdateFor } from './ecosystem/updater.js'
 import { ImapClient } from './imap.js'
 import { PassClient } from './pass.js'
 import { SmtpClient, buildForwardOptions, buildReplyOptions } from './smtp.js'
@@ -206,10 +210,146 @@ export function buildServer(
   registerCalendarTools()
   registerDriveTools()
   registerSuiteTool()
+  registerEcosystemTools()
 
   let driveClient: DriveClient | undefined
   if (cfg.products.drive.enabled) {
     driveClient = new DriveClient(cfg.products.drive, log)
+  }
+
+  function registerEcosystemTools() {
+    register(
+      'proton_ecosystem_discover',
+      {
+        title: 'Discover Proton ecosystem binaries',
+        description:
+          'Which Proton product binaries are installed and their auth status.',
+        inputSchema: {
+          response_format: z.enum(['markdown', 'json']).default('markdown'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      ({ response_format }) => {
+        const all = checkAllBinaries()
+        if (response_format === 'json') {
+          return {
+            content: [{ type: 'text', text: JSON.stringify(all, null, 2) }],
+            structuredContent: { binaries: all },
+          }
+        }
+        const lines = ['# Proton Ecosystem - Estado de binarios']
+        for (const b of all) {
+          lines.push('')
+          lines.push(`- ${b.name}`)
+          lines.push(`  Instalado: ${b.installed ? 'si' : 'no'}`)
+          if (b.version) lines.push(`  Version: ${b.version}`)
+          if (b.authenticated !== undefined)
+            lines.push(`  Autenticado: ${b.authenticated ? 'si' : 'no'}`)
+          if (b.error) lines.push(`  Error: ${b.error}`)
+        }
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      },
+    )
+
+    register(
+      'proton_ecosystem_health',
+      {
+        title: 'Ecosystem health check',
+        description: 'Unified health status of all Proton ecosystem binaries.',
+        inputSchema: {
+          response_format: z.enum(['markdown', 'json']).default('markdown'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      ({ response_format }) => {
+        const all = checkAllBinaries()
+        if (response_format === 'json') {
+          return {
+            content: [{ type: 'text', text: JSON.stringify(all, null, 2) }],
+            structuredContent: { binaries: all },
+          }
+        }
+        const lines = ['# Proton Ecosystem - Health']
+        for (const b of all) {
+          lines.push(
+            `- ${b.name}: ${b.installed ? 'installed' : 'missing'}${b.authenticated !== undefined ? ', auth: ' + b.authenticated : ''}`,
+          )
+        }
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      },
+    )
+
+    register(
+      'proton_ecosystem_check_updates',
+      {
+        title: 'Check for updates',
+        description: 'Available version updates for Proton binaries.',
+        inputSchema: {
+          product: z.enum(['bridge', 'pass', 'drive']).optional(),
+        },
+        annotations: {
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      () => {
+        const results = REGISTRY.map((b) => checkUpdateFor(b))
+        const lines = ['# Proton Ecosystem Updates']
+        for (const r of results) {
+          lines.push(
+            `- ${r.product}: ${r.currentVersion ?? 'N/A'} → ${r.latestVersion ?? '?'} ${r.updatable ? '[UPDATE]' : '[OK]'}`,
+          )
+        }
+        return { content: [{ type: 'text', text: lines.join('\n') }] }
+      },
+    )
+
+    register(
+      'proton_ecosystem_install',
+      {
+        title: 'Install Proton product',
+        description: 'Instructions for installing a Proton product binary.',
+        inputSchema: {
+          product: z.enum(['bridge', 'pass', 'drive', 'gpg']).default('drive'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      ({ product }) => {
+        const info = getBinaryInfo(product)
+        if (!info)
+          return {
+            content: [{ type: 'text', text: 'Unknown product: ' + product }],
+            isError: true,
+          }
+        const plan = buildInstallPlan(info)
+        return {
+          content: [
+            {
+              type: 'text',
+              text: [
+                '# Installing ' + info.name,
+                '',
+                ...(plan.steps ?? []),
+              ].join('\n'),
+            },
+          ],
+        }
+      },
+    )
   }
 
   return { server, imap, smtp, drive: driveClient }
@@ -1187,6 +1327,96 @@ export function buildServer(
         return { content: [{ type: 'text', text: JSON.stringify(r) }] }
       },
     )
+
+    register(
+      'proton_pass_insert',
+      {
+        title: 'Insert a secret into Proton Pass store',
+        description:
+          'Stores a new entry. Never logs nor returns the secret value.',
+        inputSchema: {
+          path: z.string().describe('Entry path, e.g. proton/bridge/api-key'),
+          secret: z.string().describe('The secret value to store.'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ path, secret }) => {
+        await passClient.insert(path, secret)
+        return { content: [{ type: 'text', text: `Inserted entry: ${path}` }] }
+      },
+    )
+
+    register(
+      'proton_pass_remove',
+      {
+        title: 'Remove a secret from Proton Pass store',
+        description: 'Permanently removes an entry from the local pass-store.',
+        inputSchema: { path: z.string().describe('Entry path to remove') },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ path }) => {
+        await passClient.remove(path)
+        return { content: [{ type: 'text', text: `Removed entry: ${path}` }] }
+      },
+    )
+
+    register(
+      'proton_pass_move',
+      {
+        title: 'Move/rename a secret in Proton Pass store',
+        description: 'Moves or renames an entry in the local pass-store.',
+        inputSchema: {
+          from: z.string().describe('Current entry path'),
+          to: z.string().describe('New entry path'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ from, to }) => {
+        await passClient.move(from, to)
+        return {
+          content: [{ type: 'text', text: `Moved ${from} \u2192 ${to}` }],
+        }
+      },
+    )
+
+    register(
+      'proton_pass_copy',
+      {
+        title: 'Copy a secret in Proton Pass store',
+        description: 'Copies an entry in the local pass-store.',
+        inputSchema: {
+          src: z.string().describe('Source entry path'),
+          dst: z.string().describe('Destination entry path'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ src, dst }) => {
+        await passClient.copy(src, dst)
+        return {
+          content: [{ type: 'text', text: `Copied ${src} \u2192 ${dst}` }],
+        }
+      },
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -1709,6 +1939,104 @@ export function buildServer(
             content: [{ type: 'text', text: String(err) }],
           }
         }
+      },
+    )
+
+    register(
+      'proton_drive_move',
+      {
+        title: 'Move files on Proton Drive',
+        description: 'Moves a remote path using the proton-drive CLI.',
+        inputSchema: {
+          from: z.string().describe('Current remote path'),
+          to: z.string().describe('Destination remote path'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ from, to }) => {
+        const r = await driveClient.moveFiles(from, to)
+        if (!r.ok)
+          return { isError: true, content: [{ type: 'text', text: r.error ?? '' }] }
+        return {
+          content: [{ type: 'text', text: `Moved ${from} \u2192 ${to}` }],
+        }
+      },
+    )
+
+    register(
+      'proton_drive_copy',
+      {
+        title: 'Copy files on Proton Drive',
+        description: 'Copies a remote path using the proton-drive CLI.',
+        inputSchema: {
+          from: z.string().describe('Source remote path'),
+          to: z.string().describe('Destination remote path'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ from, to }) => {
+        const r = await driveClient.copyFiles(from, to)
+        if (!r.ok)
+          return { isError: true, content: [{ type: 'text', text: r.error ?? '' }] }
+        return {
+          content: [{ type: 'text', text: `Copied ${from} \u2192 ${to}` }],
+        }
+      },
+    )
+
+    register(
+      'proton_drive_create_folder',
+      {
+        title: 'Create folder on Proton Drive',
+        description: 'Creates a new folder using the proton-drive CLI.',
+        inputSchema: {
+          remote_path: z.string().describe('Remote path for the new folder'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ remote_path }) => {
+        const r = await driveClient.mkdir(remote_path)
+        if (!r.ok)
+          return { isError: true, content: [{ type: 'text', text: r.error ?? '' }] }
+        return {
+          content: [{ type: 'text', text: `Created folder: ${remote_path}` }],
+        }
+      },
+    )
+
+    register(
+      'proton_drive_remove',
+      {
+        title: 'Remove files from Proton Drive',
+        description:
+          'Permanently removes a remote path from Proton Drive. Destructive operation.',
+        inputSchema: {
+          remote_path: z.string().describe('Remote path to remove'),
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ remote_path }) => {
+        const r = await driveClient.removeFiles(remote_path)
+        if (!r.ok)
+          return { isError: true, content: [{ type: 'text', text: r.error ?? '' }] }
+        return { content: [{ type: 'text', text: `Removed: ${remote_path}` }] }
       },
     )
   }

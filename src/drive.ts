@@ -237,6 +237,62 @@ export class DriveClient {
     }
   }
 
+  async moveFiles(
+    from: string,
+    to: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      this.log.info('drive moveFiles', { from, to })
+      await this.execCli(['filesystem', 'mv', from, to])
+      return { ok: true }
+    } catch (err) {
+      const msg = (err as Error).message
+      this.log.error('drive moveFiles failed', { error: msg, from, to })
+      return { ok: false, error: msg }
+    }
+  }
+
+  async copyFiles(
+    from: string,
+    to: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      this.log.info('drive copyFiles', { from, to })
+      await this.execCli(['filesystem', 'cp', from, to])
+      return { ok: true }
+    } catch (err) {
+      const msg = (err as Error).message
+      this.log.error('drive copyFiles failed', { error: msg, from, to })
+      return { ok: false, error: msg }
+    }
+  }
+
+  async mkdir(remotePath: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      this.log.info('drive mkdir', { remotePath })
+      await this.execCli(['filesystem', 'mkdir', remotePath])
+      return { ok: true }
+    } catch (err) {
+      const msg = (err as Error).message
+      this.log.error('drive mkdir failed', { error: msg, remotePath })
+      return { ok: false, error: msg }
+    }
+  }
+
+  async removeFiles(
+    remotePath: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      this.log.info('drive removeFiles', { remotePath })
+      await this.execCli(['filesystem', 'rm', remotePath])
+      return { ok: true }
+    } catch (err) {
+      const msg = (err as Error).message
+      this.log.error('drive remove failed', { error: msg, remotePath })
+      return { ok: false, error: msg }
+    }
+  }
+
   private normalizeListOutput(parsed: unknown): DriveListEntry[] {
     if (Array.isArray(parsed)) {
       return parsed.filter(

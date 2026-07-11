@@ -239,6 +239,67 @@ export class PassClient {
     }
   }
 
+  /**
+   * Inserta una nueva entrada en el store.
+   * Loguea solo el path, NUNCA el valor.
+   */
+  async insert(
+    path: string,
+    secret: string,
+  ): Promise<{ ok: true; path: string }> {
+    this.validatePath(path)
+    this.log.info('pass insert', { path })
+    await execPass(['insert', '--multiline', path], {
+      env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
+      input: secret,
+    })
+    return { ok: true, path }
+  }
+
+  /**
+   * Elimina una entrada del store.
+   */
+  async remove(path: string): Promise<{ ok: true; path: string }> {
+    this.validatePath(path)
+    this.log.info('pass remove', { path })
+    await execPass(['rm', '-f', path], {
+      env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
+    })
+    return { ok: true, path }
+  }
+
+  /**
+   * Mueve/renombra una entrada del store.
+   */
+  async move(
+    from: string,
+    to: string,
+  ): Promise<{ ok: true; from: string; to: string }> {
+    this.validatePath(from)
+    this.validatePath(to)
+    this.log.info('pass move', { from, to })
+    await execPass(['mv', from, to], {
+      env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
+    })
+    return { ok: true, from, to }
+  }
+
+  /**
+   * Copia una entrada del store.
+   */
+  async copy(
+    src: string,
+    dst: string,
+  ): Promise<{ ok: true; src: string; dst: string }> {
+    this.validatePath(src)
+    this.validatePath(dst)
+    this.log.info('pass copy', { src, dst })
+    await execPass(['cp', src, dst], {
+      env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
+    })
+    return { ok: true, src, dst }
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------

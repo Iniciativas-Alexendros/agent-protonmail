@@ -266,10 +266,10 @@ beforeEach(() => {
 
 // -----------------------------------------------------------------------------
 describe('buildServer · tool registration', () => {
-  it('exposes exactly 15 proton_* tools', async () => {
+  it('exposes exactly 19 proton_* tools', async () => {
     const client = await makeClient()
     const { tools } = await client.listTools()
-    expect(tools.filter((t) => t.name.startsWith('proton_'))).toHaveLength(15)
+    expect(tools.filter((t) => t.name.startsWith('proton_'))).toHaveLength(19)
   })
 })
 
@@ -655,14 +655,14 @@ describe('drive tools (registered)', () => {
     },
   }
 
-  it('registers the 8 drive tools', async () => {
+  it('registers the 12 drive tools', async () => {
     const { server } = buildServer(driveCfg, silentLog as never)
     const client = new Client({ name: 'test', version: '1.0.0' })
     const [clientT, serverT] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverT), client.connect(clientT)])
     const { tools } = await client.listTools()
     const driveTools = tools.filter((t) => t.name.startsWith('proton_drive_'))
-    expect(driveTools).toHaveLength(8)
+    expect(driveTools).toHaveLength(12)
     await client.close()
   })
 

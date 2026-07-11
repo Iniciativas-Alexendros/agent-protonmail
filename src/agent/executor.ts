@@ -207,6 +207,23 @@ export async function runAgent(
       })
       break
     }
+    case 'suite-manage': {
+      log.info('suite-manage: discovering Proton ecosystem binaries')
+      const { checkAllBinaries } = await import('../ecosystem/discovery.js')
+      const all = checkAllBinaries()
+      for (const b of all) {
+        const status = b.installed
+          ? `installed (${b.version ?? '?'})${b.authenticated !== undefined ? ', auth: ' + b.authenticated : ''}`
+          : 'not installed'
+        log.info('  ' + b.name + ': ' + status)
+      }
+      alerts.audit('suite-manage', 'agent/executor', {
+        totalBinaries: all.length,
+        installed: all.filter((b) => b.installed).length,
+        authenticated: all.filter((b) => b.authenticated).length,
+      })
+      break
+    }
   }
 
   alerts.audit('agent-end', 'agent/executor', { goal })

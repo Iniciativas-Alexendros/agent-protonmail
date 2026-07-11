@@ -1,0 +1,72 @@
+import { execFileSync } from 'node:child_process'
+import type { BinaryInfo } from './binaries.js'
+import { checkBinary } from './discovery.js'
+
+export interface UpdateCheckResult {
+  product: string
+  currentVersion?: string
+  latestVersion?: string
+  updatable: boolean
+  error?: string
+}
+
+export function checkUpdateFor(bin: BinaryInfo): UpdateCheckResult {
+  const local = checkBinary(bin)
+
+  if (!local.installed || !local.version) {
+    return {
+      product: bin.product,
+      currentVersion: local.version,
+      updatable: false,
+      error: local.error ?? 'not installed',
+    }
+  }
+
+  const latest = fetchLatestVersion(bin)
+
+  return {
+    product: bin.product,
+    currentVersion: local.version,
+    latestVersion: latest,
+    updatable: latest !== undefined && local.version !== latest,
+  }
+}
+
+function fetchLatestVersion(bin: BinaryInfo): string | undefined {
+  switch (bin.product) {
+    case 'drive':
+      return undefined
+    case 'pass':
+      try {
+        const out = execFileSync(
+          getPackageManager(),
+          ['show', 'pass', '--version'],
+          { encoding: 'utf-8', timeout: 10_000 },
+        )
+        return out.trim().split('\n')[0]
+      } catch {
+        return undefined
+      }
+    case 'bridge':
+      return undefined
+    case 'gpg':
+      return undefined
+  }
+  return undefined
+}
+
+function getPackageManager(): string {
+  try {
+    execFileSync('apt', ['--version'], { encoding: 'utf-8', timeout: 3000 })
+    return 'apt'
+  } catch {
+    // fallback
+  }
+  try {
+    execFileSync('pacman', ['--version'], { encoding: 'utf-8', timeout: 3000 })
+    return 'pacman'
+  } catch {
+    // fallback
+  }
+  return 'brew'
+}
