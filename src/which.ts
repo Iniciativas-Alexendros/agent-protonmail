@@ -1,10 +1,10 @@
+import { execFileSync } from 'node:child_process'
 import { accessSync } from 'node:fs'
-import { resolve } from 'node:path'
 
 export function whichSync(name: string): string {
   const pathDirs = (process.env.PATH ?? '').split(':')
   for (const dir of pathDirs) {
-    const candidate = resolve(dir, name)
+    const candidate = `${dir}/${name}`
     try {
       accessSync(candidate)
       return candidate
@@ -31,4 +31,29 @@ export function detectPlatform(): string | undefined {
   }
 }
 
+export function detectDebianCodename(): string | undefined {
+  try {
+    const out = execFileSync('lsb_release', ['-cs'], {
+      encoding: 'utf-8',
+      timeout: 3000,
+    })
+    return out.trim()
+  } catch {
+    try {
+      const content = execFileSync(
+        'sh',
+        ['-c', 'grep VERSION_CODENAME /etc/os-release | cut -d= -f2'],
+        {
+          encoding: 'utf-8',
+          timeout: 3000,
+        },
+      )
+      return content.trim()
+    } catch {
+      return undefined
+    }
+  }
+}
+
 export const Platform = detectPlatform()
+export const Codename = detectDebianCodename()

@@ -1,4 +1,5 @@
-import { Platform } from '../which.js'
+import { execFileSync } from 'node:child_process'
+import { Platform, Codename } from '../which.js'
 import type { BinaryInfo, InstallationGuide } from './binaries.js'
 import { installationGuide } from './binaries.js'
 
@@ -7,6 +8,59 @@ export interface InstallResult {
   ok: boolean
   message: string
   steps?: string[]
+}
+
+export function installOnUbuntu(bin: BinaryInfo): InstallResult {
+  const product = bin.product
+  if (product === 'pass') {
+    return runApt(['install', 'pass', 'gpg', 'tree'])
+  }
+  if (product === 'gpg') {
+    return runApt(['install', 'gnupg2'])
+  }
+  if (product === 'drive') {
+    return {
+      product,
+      ok: false,
+      message: `Descarga el binario proton-drive desde https://proton.me/support/drive-cli`,
+      steps: [
+        'wget -q https://proton.me/download/drive/cli/linux/proton-drive -O /usr/local/bin/proton-drive',
+        'chmod +x /usr/local/bin/proton-drive',
+        'proton-drive --version',
+      ],
+    }
+  }
+  // Bridge — último producto, siempre se ejecuta si llegamos aquí
+  return {
+    product,
+    ok: false,
+    message: 'Bridge requiere instalación manual del paquete oficial de Proton',
+    steps: [
+      'Descarga el .deb desde https://proton.me/mail/bridge',
+      `Para Ubuntu ${Codename ?? '26.04'}: instala con dpkg -i protonmail-bridge*.deb`,
+      'O usa el contenedor Docker: docker compose up -d proton-bridge',
+    ],
+  }
+}
+
+function runApt(args: string[]): InstallResult {
+  try {
+    execFileSync('sudo', ['apt', ...args, '-y'], {
+      encoding: 'utf-8',
+      timeout: 120_000,
+    })
+    return {
+      product: args[args.length - 1] ?? 'package',
+      ok: true,
+      message: `Installed via apt ${args.join(' ')}`,
+    }
+  } catch (err) {
+    return {
+      product: args[args.length - 1] ?? 'package',
+      ok: false,
+      message: (err as Error).message,
+    }
+  }
 }
 
 export function buildInstallPlan(bin: BinaryInfo): InstallResult {

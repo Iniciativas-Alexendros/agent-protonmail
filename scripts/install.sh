@@ -14,11 +14,11 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-info()  { echo -e "${CYAN}→${NC} $1"; }
-ok()    { echo -e "${GREEN}✓${NC} $1"; }
-warn()  { echo -e "${YELLOW}⚠${NC} $1"; }
-err()   { echo -e "${RED}✗${NC} $1"; }
-ask()   { echo -en "${YELLOW}?${NC} $1 "; }
+info() { echo -e "${CYAN}→${NC} $1"; }
+ok() { echo -e "${GREEN}✓${NC} $1"; }
+warn() { echo -e "${YELLOW}⚠${NC} $1"; }
+err() { echo -e "${RED}✗${NC} $1"; }
+ask() { echo -en "${YELLOW}?${NC} $1 "; }
 title() { echo -e "\n${BOLD}$1${NC}"; }
 
 # ────────────────────────────────────────────────────────────────────
@@ -28,15 +28,17 @@ title "Proton Suite Agent · Instalador"
 echo ""
 
 OS=""
+OS_CODENAME=""
 if grep -qi "arch\|endeavour" /etc/os-release 2>/dev/null; then
   OS="arch"
 elif grep -qi "debian\|ubuntu\|mint" /etc/os-release 2>/dev/null; then
   OS="debian"
+  OS_CODENAME=$(lsb_release -cs 2>/dev/null || cat /etc/os-release 2>/dev/null | grep VERSION_CODENAME | cut -d= -f2 || echo "noble")
 elif [[ "$(uname -s)" == "Darwin" ]]; then
   OS="macos"
 fi
 
-info "SO detectado: ${OS:-desconocido}"
+info "SO detectado: ${OS:-desconocido}${OS_CODENAME:+ (${OS_CODENAME})}"
 
 # ────────────────────────────────────────────────────────────────────
 # 1. Bridge
@@ -55,8 +57,17 @@ case "$OS" in
     ;;
   debian)
     echo ""
-    info "En Debian/Ubuntu, descarga Bridge desde:"
+    info "En Ubuntu/Debian, instala Bridge desde:"
     echo "    ${BOLD}https://proton.me/mail/bridge${NC}"
+    echo ""
+    echo "Pasos para Ubuntu ${OS_CODENAME:-26.04}:"
+    echo "  1. Descarga el .deb desde el enlace de arriba"
+    echo "  2. sudo dpkg -i protonmail-bridge*.deb"
+    echo "  3. sudo apt install -f   (dependencias faltantes)"
+    echo "  4. protonmail-bridge-core --cli"
+    echo "     Dentro: login → credenciales → 2FA → info → exit"
+    echo ""
+    echo "También puedes usar Docker: docker compose up -d"
     ;;
   macos)
     echo ""
@@ -169,7 +180,7 @@ title "5. Guardando configuración"
 
 ENV_FILE=".env"
 
-cat > "$ENV_FILE" <<EOF
+cat >"$ENV_FILE" <<EOF
 # Proton Suite Agent · generado por install.sh
 PROTON_BRIDGE_USER=$BRIDGE_USER
 PROTON_BRIDGE_PASS=${BRIDGE_PASS:-}
@@ -181,10 +192,10 @@ PROTON_BRIDGE_TLS_INSECURE=true
 EOF
 
 if [[ -n "$BRIDGE_PASS_PATH" ]]; then
-  echo "PROTON_BRIDGE_PASS_PATH=$BRIDGE_PASS_PATH" >> "$ENV_FILE"
+  echo "PROTON_BRIDGE_PASS_PATH=$BRIDGE_PASS_PATH" >>"$ENV_FILE"
 fi
 
-cat >> "$ENV_FILE" <<EOF
+cat >>"$ENV_FILE" <<EOF
 PROTON_PASS_ENABLED=$PASS_ENABLED
 PROTON_PASS_STORE_DIR=~/.password-store
 PROTON_CALENDAR_ENABLED=$CALENDAR_ENABLED
@@ -258,5 +269,11 @@ echo "Comandos útiles:"
 echo "  npx -y @alexendros/protonsuite-agent setup          — verificar conectividad"
 echo "  npx -y @alexendros/protonsuite-agent pass-audit     — auditar vault de Pass"
 echo "  npx -y @alexendros/protonsuite-agent suite-status   — estado de la suite"
+echo "  npx -y @alexendros/protonsuite-agent suite-manage   — descubrir binarios"
+echo ""
+echo "Drive CLI (opcional):"
+echo "  wget 'https://proton.me/download/drive/cli/linux/proton-drive' \\"
+echo "    -O /tmp/proton-drive && sudo mv /tmp/proton-drive /usr/local/bin/ && sudo chmod +x /usr/local/bin/proton-drive"
+echo "  proton-drive auth login"
 echo ""
 echo "Documentación: https://github.com/Iniciativas-Alexendros/agent-protonmail"

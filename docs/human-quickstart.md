@@ -4,9 +4,11 @@ Este documento te lleva de cero a "leer el inbox con un agente IA" y, opcionalme
 
 ## Qué necesitas
 
-- **Node ≥ 22** instalado en tu máquina.
+- **Node ≥ 22** instalado. En Ubuntu 26.04: `sudo apt install nodejs npm`.
 - Una cuenta **Proton Mail**.
-- **Proton Mail Bridge** headless instalado (`protonmail-bridge-core` en Arch/EndeavourOS; en otros sistemas usa el paquete oficial de Proton).
+- **Proton Mail Bridge** headless instalado (`protonmail-bridge-core`).
+  En Ubuntu 26.04: descarga el .deb desde https://proton.me/mail/bridge
+  e instala con `sudo dpkg -i protonmail-bridge*.deb && sudo apt install -f`.
 
 ## 1. Arrancar Proton Mail Bridge
 
@@ -72,10 +74,10 @@ Añade esto a la configuración MCP de tu agente (formato genérico):
         "PROTON_BRIDGE_PASS": "your-bridge-password",
         "PROTON_MAIL_FROM": "you@proton.me",
         "PROTON_BRIDGE_TLS_INSECURE": "true",
-        "AGENT_DRY_RUN": "true"
-      }
-    }
-  }
+        "AGENT_DRY_RUN": "true",
+      },
+    },
+  },
 }
 ```
 

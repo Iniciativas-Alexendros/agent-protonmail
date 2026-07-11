@@ -1,8 +1,8 @@
 # Proton Suite Agent
 
 [![npm version](https://img.shields.io/npm/v/@alexendros/protonsuite-agent.svg)](https://www.npmjs.com/package/@alexendros/protonsuite-agent)
-[![CI](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/codeql.yml)
+[![CI](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](./package.json)
 [![MCP SDK](https://img.shields.io/badge/%40modelcontextprotocol%2Fsdk-%5E1.29-blue.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
@@ -22,7 +22,32 @@ Agente multi-producto para **Proton Suite** con un **MCP server** embebido. Inte
 
 ## Quickstart — 5 minutos
 
-Prerrequisitos: **Node ≥ 22**, **Proton Mail Bridge** corriendo en local y, para Pass, **`pass` CLI** instalado (`apt install pass`).
+Prerrequisitos: **Node ≥ 22** (en Ubuntu 26.04: `sudo apt install nodejs npm`),
+**Proton Mail Bridge** corriendo en local (`sudo dpkg -i protonmail-bridge*.deb`),
+y, para Pass, **`pass` CLI** instalado (`sudo apt install pass gpg`).
+
+### Instalación en Ubuntu 26.04
+
+```bash
+# Clonar e instalar dependencias
+git clone https://github.com/Iniciativas-Alexendros/protonmail-agent.git
+cd protonmail-agent
+npm install
+
+# Instalador interactivo
+bash scripts/install.sh
+
+# Compilar y probar
+npm run build
+npm run smoke
+
+# (Opcional) Instalar Proton Drive CLI
+sudo wget -q 'https://proton.me/download/drive/cli/linux/proton-drive' \
+  -O /usr/local/bin/proton-drive && sudo chmod +x /usr/local/bin/proton-drive
+proton-drive auth login
+```
+
+### Configurar cliente MCP
 
 ### 1. Instalar
 

@@ -35,21 +35,22 @@ export function checkUpdateFor(bin: BinaryInfo): UpdateCheckResult {
 function fetchLatestVersion(bin: BinaryInfo): string | undefined {
   switch (bin.product) {
     case 'drive':
+    case 'gpg':
       return undefined
     case 'pass':
       try {
         const out = execFileSync(
           getPackageManager(),
-          ['show', 'pass', '--version'],
+          ['cache', 'policy', 'pass'],
           { encoding: 'utf-8', timeout: 10_000 },
         )
-        return out.trim().split('\n')[0]
+        const re = /Candidato:\s*(\S+)/
+        const match = re.exec(out)
+        return match?.[1] ?? undefined
       } catch {
         return undefined
       }
     case 'bridge':
-      return undefined
-    case 'gpg':
       return undefined
   }
   return undefined
