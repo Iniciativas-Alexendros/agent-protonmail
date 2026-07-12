@@ -1,78 +1,41 @@
 # Proton Suite Agent
 
-[![npm version](https://img.shields.io/npm/v/@alexendros/protonsuite-agent.svg)](https://www.npmjs.com/package/@alexendros/protonsuite-agent)
 [![CI](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml)
+[![Quality](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/quality.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](./package.json)
-[![MCP SDK](https://img.shields.io/badge/%40modelcontextprotocol%2Fsdk-%5E1.29-blue.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
 
-Agente multi-producto para **Proton Suite** con un **MCP server** embebido. Integra Mail (Bridge IMAP/SMTP), Pass (pass-cli) y prepara Calendar + Drive. Funciones principales:
+**MCP server** multi-producto para **Proton Suite**: Mail (Bridge IMAP/SMTP), Pass (pass-cli), Drive (CLI oficial) y Calendar (CalDAV stub). Un agente puede operar el buzón, gestionar contraseñas, sincronizar archivos y clasificar correo — todo sin salir de tu máquina.
 
-1. **Operar el buzón** como servidor MCP — lectura, búsqueda, envío, mover, etiquetar, borrar.
-2. **Gestionar contraseñas** vía Proton Pass — listar, recuperar (sin exponer valores al chat), generar, auditar fortaleza.
-3. **Configurar, organizar y vigilar** de forma inteligente — auto-detección de Bridge, clasificación profesional de correos, propuesta de carpetas/etiquetas, alertas de spam/fraude, auditoría de vault Pass.
-
-- **Modo primario:** `stdio` local, sin exponer nada a la red.
-- **Modo avanzado:** `streamable HTTP` con bearer auth + origin allowlist.
-- **Privacidad:** Bridge descifra el correo en tu máquina; Pass nunca revela secretos en texto al chat; el agente nunca ve tu contraseña Proton.
-- **Licencia:** AGPL-3.0 — software libre con copyleft de red.
+| Modo                | Descripción                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| **stdio** (default) | Sin exponer nada a la red. Ideal para agentes IA locales.   |
+| **streamable HTTP** | Bearer auth + origin allowlist. Para despliegue con Docker. |
 
 ---
 
-## Quickstart — 5 minutos
+## Quickstart
 
-Prerrequisitos: **Node ≥ 22** (en Ubuntu 26.04: `sudo apt install nodejs npm`),
-**Proton Mail Bridge** corriendo en local (`sudo dpkg -i protonmail-bridge*.deb`),
-y, para Pass, **`pass` CLI** instalado (`sudo apt install pass gpg`).
+**Prerrequisitos:** Node ≥ 22, Proton Mail Bridge corriendo en local, `pass` + `gpg` para contraseñas.
 
-### Instalación en Ubuntu 26.04
+### 1. Instalar y compilar
 
 ```bash
-# Clonar e instalar dependencias
 git clone https://github.com/Iniciativas-Alexendros/protonmail-agent.git
 cd protonmail-agent
-npm install
-
-# Instalador interactivo
-bash scripts/install.sh
-
-# Compilar y probar
-npm run build
-npm run smoke
-
-# (Opcional) Instalar Proton Drive CLI
-sudo wget -q 'https://proton.me/download/drive/cli/linux/proton-drive' \
-  -O /usr/local/bin/proton-drive && sudo chmod +x /usr/local/bin/proton-drive
-proton-drive auth login
+npm install && npm run build && npm run smoke
 ```
 
-### Configurar cliente MCP
-
-### 1. Instalar
-
-```bash
-npx -y @alexendros/protonsuite-agent setup
-# o, si prefieres el MCP server directamente:
-npx -y @alexendros/protonsuite-agent protonsuite-mcp
-```
-
-> El binario `protonsuite-agent` ejecuta el agente; `protonsuite-mcp` ejecuta el MCP server.
-
-### 2. Verificar conexión (Mail)
+### 2. Configurar variables de entorno
 
 ```bash
 export PROTON_BRIDGE_USER=you@proton.me
 export PROTON_BRIDGE_PASS=your-bridge-password
 export PROTON_MAIL_FROM=you@proton.me
-npx -y @alexendros/protonsuite-agent setup
 ```
 
-Si Bridge responde, el agente reporta carpetas y recomienda el siguiente paso.
-
-### 3. Configurar tu cliente MCP
-
-Añade este bloque a tu cliente MCP (formato genérico `mcpServers`):
+### 3. Conectar tu cliente MCP
 
 ```jsonc
 {
@@ -87,166 +50,132 @@ Añade este bloque a tu cliente MCP (formato genérico `mcpServers`):
         "PROTON_MAIL_FROM": "you@proton.me",
         "PROTON_BRIDGE_TLS_INSECURE": "true",
         "PROTON_PASS_ENABLED": "true",
-        "PROTON_PASS_STORE_DIR": "~/.password-store",
       },
     },
   },
 }
 ```
 
-> **Seguridad:** no dejes el bridge password en claro en el disco. Usa Proton Pass como backend de secretos con `PROTON_PASS_BRIDGE_PATH=proton/bridge/password` o el wrapper JIT en [`connectors/stdio-wrapper.sh.example`](./connectors/stdio-wrapper.sh.example).
+> **Seguridad:** usa `PROTON_PASS_BRIDGE_PATH=proton/bridge/password` o el wrapper JIT en [`connectors/stdio-wrapper.sh.example`](./connectors/stdio-wrapper.sh.example) para no dejar el bridge password en disco.
 
-### 4. Organizar el buzón
+### 4. Organizar el buzón (dry-run)
 
 ```bash
-npx -y @alexendros/protonsuite-agent organize
+AGENT_DRY_RUN=true npx -y @alexendros/protonsuite-agent organize
 ```
 
-En modo `AGENT_DRY_RUN=true` (default), el agente analiza el buzón y presenta un plan de carpetas, etiquetas y alertas sin aplicar cambios. Cuando hayas validado el plan, desactiva `AGENT_DRY_RUN` para ejecutar.
-
----
-
-## Documentación
-
-| Documento                                                            | Para quién                   | Qué cubre                                                           |
-| -------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------- |
-| [`docs/human-quickstart.md`](./docs/human-quickstart.md)             | Usuarios no técnicos         | Instalación paso a paso, Bridge, Pass, primer uso, modo agente.     |
-| [`docs/agent-quickstart.md`](./docs/agent-quickstart.md)             | Agentes IA / desarrolladores | Cómo consumir las tools, formatos de respuesta, ejemplos.           |
-| [`docs/bridge-core.md`](./docs/bridge-core.md)                       | Todos                        | `protonmail-bridge-core` headless, puertos, vault, troubleshooting. |
-| [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md)       | Operadores                   | Wrapper stdio que no deja secretos en disco.                        |
-| [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) | DevOps                       | Despliegue HTTP con Docker, auth, allowlist, healthcheck.           |
-| [`docs/alerting.md`](./docs/alerting.md)                             | Operadores                   | Configuración de alertas de contenido, webhook, logs.               |
-| [`docs/knowledge-base.md`](./docs/knowledge-base.md)                 | Todos                        | Convenciones de clasificación y categorías profesionales.           |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md)                               | Desarrolladores              | Capas internas, modelo de amenazas, decisiones.                     |
-| [`SECURITY.md`](./SECURITY.md)                                       | Desarrolladores / auditores  | Controles activos y threat model para agentes IA.                   |
-| [`CONTRIBUTING.md`](./CONTRIBUTING.md)                               | Contribuidores               | Convenciones, PRs, tests, licencia AGPL-3.0.                        |
-
-## Conectores y playbooks
-
-- [`connectors/stdio-npx.json`](./connectors/stdio-npx.json): config stdio genérica para cualquier cliente MCP.
-- [`connectors/stdio-wrapper.sh.example`](./connectors/stdio-wrapper.sh.example): wrapper seguro con resolución JIT de secretos.
-- [`connectors/http-curl.sh.example`](./connectors/http-curl.sh.example): handshake HTTP con curl.
-- [`playbooks/onboarding.md`](./playbooks/onboarding.md): pipeline de objetivos para puesta en marcha.
-- [`playbooks/organize-inbox.md`](./playbooks/organize-inbox.md): organizar y archivar correos.
-- [`playbooks/triage-email.md`](./playbooks/triage-email.md): workflow de triaje (dry-run obligatorio, nunca borra).
-- [`playbooks/reply-organize.md`](./playbooks/reply-organize.md): responder y organizar correos.
-- [`playbooks/fraud-detection.md`](./playbooks/fraud-detection.md): revisión de correos sospechosos.
-- [`playbooks/setup-checklist.md`](./playbooks/setup-checklist.md): checklist de puesta en marcha.
-- [`playbooks/pass-audit.md`](./playbooks/pass-audit.md): auditoría de fortaleza de contraseñas y rotación.
-- [`playbooks/suite-daily-briefing.md`](./playbooks/suite-daily-briefing.md): briefing diario cross-producto.
+El agente analiza el inbox y presenta un plan de carpetas, etiquetas y alertas **sin aplicar cambios**. Desactiva `AGENT_DRY_RUN` para ejecutar.
 
 ---
 
 ## Tools MCP
 
-Todas las tools de lectura aceptan `response_format: "markdown" | "json"`. Organizadas por producto.
+25 tools organizadas por producto. Todas aceptan `response_format: "markdown" | "json"`.
 
-### Mail (14 tools)
+| Producto     | Tools | Resumen                                                                   |
+| ------------ | ----- | ------------------------------------------------------------------------- |
+| **Mail**     | 14    | List, search, read, send, reply, forward, flag, move, delete, attachments |
+| **Pass**     | 4     | List, get (sin exponer valores), generate, health                         |
+| **Drive**    | 8     | Status, list, download, upload, share, audit, organize, format report     |
+| **Calendar** | stub  | Registradas pero `{available: false}` hasta CalDAV vía Bridge             |
+| **Suite**    | 1     | Estado unificado de todos los productos                                   |
 
-| Tool                    | Tipo             | Descripción                                               |
-| ----------------------- | ---------------- | --------------------------------------------------------- |
-| `proton_list_folders`   | read             | Lista mailboxes (INBOX, Sent, Trash, labels, custom).     |
-| `proton_create_folder`  | write            | Crea un mailbox nuevo.                                    |
-| `proton_mailbox_status` | read             | Contadores: total / unseen / recent.                      |
-| `proton_list_emails`    | read             | Lista paginada de mensajes recientes.                     |
-| `proton_search_emails`  | read             | Búsqueda con filtros combinables.                         |
-| `proton_get_email`      | read             | Mensaje completo: headers, cuerpo, adjuntos.              |
-| `proton_get_attachment` | read             | Adjunto en base64; `max_bytes` 10 MB default (cap 50 MB). |
-| `proton_send_email`     | write            | Envía texto/HTML + adjuntos.                              |
-| `proton_reply_email`    | write            | Responde preservando threading.                           |
-| `proton_forward_email`  | write            | Reenvía con adjuntos opcionales.                          |
-| `proton_flag_email`     | write idempotent | read/unread/starred/unstarred/custom.                     |
-| `proton_move_email`     | write            | Mueve entre mailboxes por UID.                            |
-| `proton_delete_email`   | destructive      | `trash` (default) o `permanent`.                          |
-
-### Pass (4 tools)
-
-| Tool                   | Tipo  | Descripción                                                                             |
-| ---------------------- | ----- | --------------------------------------------------------------------------------------- |
-| `proton_pass_list`     | read  | Lista entradas del password store (solo nombres, nunca valores).                        |
-| `proton_pass_get`      | read  | Recupera un secreto y lo inyecta en el entorno — respuesta `{found:true}` sin el valor. |
-| `proton_pass_generate` | write | Genera contraseña segura y la guarda en el store.                                       |
-| `proton_pass_health`   | read  | Verifica conectividad y estado del store.                                               |
-
-### Suite (1 tool)
-
-| Tool                  | Tipo | Descripción                                                                         |
-| --------------------- | ---- | ----------------------------------------------------------------------------------- |
-| `proton_suite_status` | read | Estado unificado de todos los productos configurados (Mail, Pass, Calendar, Drive). |
-
-### Calendar (stub — próximamente)
-
-Las tools `proton_calendar_*` están registradas y visibles en `tools/list`,
-pero devuelven `{available: false}` hasta que Proton exponga CalDAV vía Bridge.
-
-### Proton Drive (CLI oficial)
-
-Integración con Proton Drive mediante el binario oficial `proton-drive`
-(descargable desde [proton.me/support/drive-cli](https://proton.me/support/drive-cli)).
-El agente actúa como wrapper sobre el CLI — no almacena credenciales de Drive
-ni necesita OAuth propio: el operador autentica el CLI una vez y el token se
-persiste en un volumen de Docker o en el host.
-
-Requiere `DRIVE_ENABLED=true` (por defecto). El binario debe estar accesible en
-`PATH` o en `DRIVE_CLI_BIN`. Véase [`docs/drive-audit.md`](./docs/drive-audit.md)
-para configuración completa, persistencia del token y ejemplos de uso.
-
-| Tool                         | Tipo             | Descripción                                              |
-| ---------------------------- | ---------------- | -------------------------------------------------------- |
-| `proton_drive_status`        | read             | Estado del binario CLI + staging local                   |
-| `proton_drive_list_files`    | read             | Lista un path remoto (`filesystem list --json`)          |
-| `proton_drive_download`      | write idempotent | Descarga un path remoto al staging                       |
-| `proton_drive_upload`        | write            | Sube el staging a un path remoto                         |
-| `proton_drive_share`         | write idempotent | Invita a un usuario Proton a un path                     |
-| `proton_drive_audit`         | read             | Inventario + duplicados + formatos obsoletos del staging |
-| `proton_drive_organize`      | write            | Reorganiza el staging por tipo (dry-run por defecto)     |
-| `proton_drive_format_report` | read             | Reporte de extensiones y formatos obsoletos del staging  |
-
-Goals del agente:
-
-| Goal             | Script                         |
-| ---------------- | ------------------------------ |
-| `drive-audit`    | `npm run agent:drive-audit`    |
-| `drive-organize` | `npm run agent:drive-organize` |
-| `drive-list`     | `npm run agent:drive-list`     |
-| `drive-download` | `npm run agent:drive-download` |
-| `drive-upload`   | `npm run agent:drive-upload`   |
+> Ver tabla completa en [`docs/agent-quickstart.md`](./docs/agent-quickstart.md#tools-mcp).
 
 ---
 
 ## Agente
 
-| Goal           | Pipeline                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------- |
-| `setup`        | Verifica conectividad Bridge (IMAP + SMTP), envía email de prueba.                            |
-| `organize`     | Analiza inbox, clasifica, propone carpetas/etiquetas, detecta amenazas.                       |
-| `monitor`      | Igual que organize pero solo lectura — presenta alertas.                                      |
-| `alert`        | Inspecciona solo amenazas de seguridad.                                                       |
-| `pass-audit`   | Audita fortaleza de contraseñas en el vault Pass, detecta duplicados y entradas sin rotación. |
-| `suite-status` | Reporte unificado de todos los productos configurados.                                        |
-| `discover`     | Check rápido de conectividad Bridge.                                                          |
-| `check-imap`   | Solo verificación IMAP (sin enviar email).                                                    |
+| Goal                      | Pipeline                                                      |
+| ------------------------- | ------------------------------------------------------------- |
+| `setup`                   | Verifica Bridge (IMAP + SMTP), envía email de prueba          |
+| `organize`                | Clasifica inbox, propone carpetas/etiquetas, detecta amenazas |
+| `monitor`                 | Solo lectura — presenta alertas sin modificar                 |
+| `alert`                   | Inspecciona amenazas de seguridad                             |
+| `pass-audit`              | Fortaleza de contraseñas, duplicados, rotación                |
+| `suite-status`            | Reporte unificado cross-producto                              |
+| `discover` / `check-imap` | Verificación rápida de conectividad                           |
+
+### Drive CLI
+
+```bash
+# Instalar (opcional)
+sudo wget -q 'https://proton.me/download/drive/cli/linux/proton-drive' \
+  -O /usr/local/bin/proton-drive && sudo chmod +x /usr/local/bin/proton-drive
+proton-drive auth login
+```
+
+Requiere `DRIVE_ENABLED=true` (default). Ver [`docs/drive-audit.md`](./docs/drive-audit.md) para configuración completa.
 
 ---
 
-## Calidad y seguridad
+## Despliegue
+
+### Docker
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-npm run smoke
-npm run license-check
-npm run license-check:prod
+docker compose up -d
 ```
 
-- TypeScript strict, tests con Vitest, smoke `stdio` en CI.
+Ver [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) para auth, allowlist y healthcheck.
+
+### Instalador Ubuntu
+
+```bash
+bash scripts/install.sh
+```
+
+Ver [`scripts/install.sh`](./scripts/install.sh) para la instalación interactiva completa.
+
+---
+
+## Documentación
+
+| Documento                                                            | Para quién           | Qué cubre                                         |
+| -------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
+| [`docs/human-quickstart.md`](./docs/human-quickstart.md)             | Usuarios no técnicos | Instalación paso a paso, Bridge, Pass, primer uso |
+| [`docs/agent-quickstart.md`](./docs/agent-quickstart.md)             | Agentes IA           | Tools, formatos de respuesta, ejemplos            |
+| [`docs/bridge-core.md`](./docs/bridge-core.md)                       | Todos                | Bridge headless, puertos, vault, troubleshooting  |
+| [`docs/deployment-http-docker.md`](./docs/deployment-http-docker.md) | DevOps               | Docker, auth, allowlist, healthcheck              |
+| [`docs/local-stdio-secrets.md`](./docs/local-stdio-secrets.md)       | Operadores           | Wrapper stdio sin secretos en disco               |
+| [`docs/alerting.md`](./docs/alerting.md)                             | Operadores           | Alertas de contenido, webhook, logs               |
+| [`docs/knowledge-base.md`](./docs/knowledge-base.md)                 | Todos                | Clasificación profesional y categorías            |
+| [`docs/drive-audit.md`](./docs/drive-audit.md)                       | Operadores           | Drive CLI, persistencia token, auditoría          |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md)                               | Desarrolladores      | Capas internas, modelo de amenazas                |
+| [`SECURITY.md`](./SECURITY.md)                                       | Auditores            | Controles activos y threat model                  |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md)                               | Contribuidores       | Convenciones, PRs, tests                          |
+
+### Conectores
+
+| Archivo                                                                        | Uso                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------ |
+| [`connectors/stdio-npx.json`](./connectors/stdio-npx.json)                     | Config stdio genérica para cualquier cliente MCP |
+| [`connectors/stdio-wrapper.sh.example`](./connectors/stdio-wrapper.sh.example) | Wrapper seguro con resolución JIT de secretos    |
+| [`connectors/http-curl.sh.example`](./connectors/http-curl.sh.example)         | Handshake HTTP con curl                          |
+
+### Playbooks
+
+[`playbooks/`](./playbooks/) — workflows predefinidos: onboarding, organize inbox, triage, fraud detection, pass audit, daily briefing, setup checklist.
+
+---
+
+## Calidad
+
+```bash
+npm run typecheck   # TypeScript strict
+npm test            # 218 tests (Vitest)
+npm run build       # Compilación
+npm run smoke       # Verificación stdio
+npm run knip        # Unused deps/exports
+```
+
+### Seguridad
+
 - Bearer timing-safe, origin allowlist, rate-limit 120/min/token.
 - Per-session HTTP transport, sesiones idle evicted a los 30 min.
-- Sin credenciales ni cuerpos de request en logs; stdout reservado a JSON-RPC en modo `stdio`.
-- Proton Pass nunca expone valores de secreto en respuestas MCP — solo confirma `{found: true}`.
-- Alertas de contenido con webhook + salida estructurada a fichero.
-- Modo dry-run por defecto en el agente hasta validación del operador.
+- Sin credenciales ni cuerpos de request en logs.
+- Pass nunca expone valores de secreto — solo `{found: true}`.
+- Dry-run por defecto en el agente.
 
 ---
 
@@ -254,4 +183,4 @@ npm run license-check:prod
 
 [AGPL-3.0](./LICENSE) — Copyright 2026 Alejandro Domingo Agustí (Alexendros). Sin afiliación a Proton AG.
 
-Para la lista de dependencias y compatibilidad de licencias, véase [`NOTICE.md`](./NOTICE.md).
+Ver [`NOTICE.md`](./NOTICE.md) para dependencias y compatibilidad de licencias.
