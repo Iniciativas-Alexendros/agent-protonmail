@@ -87,7 +87,7 @@
     "express-rate-limit": "^8.4.1",
     "imapflow": "^1.4.3",
     "mailparser": "^3.9.12",
-    "nodemailer": "^6.10.1",
+    "nodemailer": "^9.0.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -109,7 +109,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-security": "^3.0.1",
-    "eslint-plugin-unicorn": "^59.0.1",
+    "eslint-plugin-unicorn": "^65.0.1",
     "husky": "^9.1.7",
     "knip": "^5.88.1",
     "license-checker": "^25.0.1",
