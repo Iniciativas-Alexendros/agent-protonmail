@@ -16,7 +16,7 @@
  * cambia a `gopass` u otro backend, la interfaz de PassClient se mantiene.
  */
 import { execFile } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
 import { homedir } from 'node:os'
 import { resolve as resolvePath } from 'node:path'
 
@@ -70,14 +70,17 @@ export interface PassAuditResult {
 
 export class PassClient {
   private readonly storeDir: string
+  private readonly exec: typeof execPass
 
   constructor(
     opts: PassClientOptions,
     private readonly log: PassLogger,
+    exec?: typeof execPass,
   ) {
     this.storeDir = opts.storeDir.startsWith('~')
       ? resolvePath(homedir(), opts.storeDir.slice(2))
       : resolvePath(opts.storeDir)
+    this.exec = exec ?? execPass
   }
 
   // ---------------------------------------------------------------------------
@@ -88,7 +91,7 @@ export class PassClient {
   async list(filter?: string): Promise<string[]> {
     const args = ['ls']
     if (filter) args.push(filter)
-    const stdout = await execPass(args, {
+    const stdout = await this.exec(args, {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
     })
     this.log.debug('pass list ok', { count: stdout.trim().split('\n').length })
@@ -109,7 +112,7 @@ export class PassClient {
     this.validatePath(path)
     this.log.debug('pass get', { path })
     try {
-      const stdout = await execPass(['show', path], {
+      const stdout = await this.exec(['show', path], {
         env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
       })
       return stdout.trim().split('\n')[0]
@@ -138,7 +141,7 @@ export class PassClient {
     const password = randomBytes(Math.ceil(length * 0.75))
       .toString('base64')
       .slice(0, length)
-    await execPass(['insert', '--multiline', path], {
+    await this.exec(['insert', '--multiline', '--force', path], {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
       input: password,
     })
@@ -203,7 +206,10 @@ export class PassClient {
         Boolean,
       ).length
 
-      if (value.length < 12 || typeCount < 2) {
+      const isShort = value.length < 12
+      const isLowDiversity = typeCount < 2
+
+      if (isShort || isLowDiversity) {
         weakPasswords.push(entry)
       }
 
@@ -249,7 +255,7 @@ export class PassClient {
   ): Promise<{ ok: true; path: string }> {
     this.validatePath(path)
     this.log.info('pass insert', { path })
-    await execPass(['insert', '--multiline', path], {
+    await this.exec(['insert', '--multiline', '--force', path], {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
       input: secret,
     })
@@ -262,7 +268,7 @@ export class PassClient {
   async remove(path: string): Promise<{ ok: true; path: string }> {
     this.validatePath(path)
     this.log.info('pass remove', { path })
-    await execPass(['rm', '-f', path], {
+    await this.exec(['rm', '-f', path], {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
     })
     return { ok: true, path }
@@ -278,7 +284,7 @@ export class PassClient {
     this.validatePath(from)
     this.validatePath(to)
     this.log.info('pass move', { from, to })
-    await execPass(['mv', from, to], {
+    await this.exec(['mv', from, to], {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
     })
     return { ok: true, from, to }
@@ -294,7 +300,7 @@ export class PassClient {
     this.validatePath(src)
     this.validatePath(dst)
     this.log.info('pass copy', { src, dst })
-    await execPass(['cp', src, dst], {
+    await this.exec(['cp', src, dst], {
       env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
     })
     return { ok: true, src, dst }
@@ -311,13 +317,9 @@ export class PassClient {
     }
   }
 
-  /** Hash simple no criptográfico para detección de duplicados. */
+  /** Hash para detección de duplicados (SHA-256, primeros 16 hex chars). */
   private simpleHash(s: string): string {
-    let h = 0
-    for (let i = 0; i < s.length; i++) {
-      h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
-    }
-    return String(h)
+    return createHash('sha256').update(s).digest('hex').slice(0, 16)
   }
 }
 

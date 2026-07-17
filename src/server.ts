@@ -1427,12 +1427,18 @@ export function buildServer(
 
   // ---------------------------------------------------------------------------
   // Calendar stubs
+  //
+  // Proton Calendar does NOT expose standard CalDAV — it uses E2E-encrypted
+  // proprietary sync. These stubs remain until Proton exposes a public API.
+  // For non-Proton CalDAV servers (Nextcloud, iCloud, Fastmail), set
+  // PROTON_CALDAV_URL and PROTON_CALDAV_USERNAME.
   // ---------------------------------------------------------------------------
   function registerCalendarTools() {
     if (!cfg.products.calendar.enabled) return
     const unavailable = JSON.stringify({
       available: false,
-      reason: 'Calendar CalDAV not yet exposed by Proton Bridge.',
+      reason:
+        'Proton Calendar uses E2E-encrypted sync, not standard CalDAV. No third-party client can connect to Proton Calendar directly. To use calendar tools with a non-Proton CalDAV server (Nextcloud, iCloud, Fastmail), set PROTON_CALDAV_URL and PROTON_CALDAV_USERNAME.',
     })
     for (const t of [
       'proton_calendar_list_events',
@@ -1443,7 +1449,7 @@ export function buildServer(
         t,
         {
           title: t,
-          description: `[STUB] ${t}`,
+          description: `[STUB] ${t} — Proton Calendar does not expose standard CalDAV. Configure a non-Proton CalDAV server to enable this tool.`,
           annotations: { readOnlyHint: true, openWorldHint: true },
         },
         () => ({ content: [{ type: 'text', text: unavailable }] }),
