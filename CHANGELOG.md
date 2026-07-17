@@ -7,6 +7,63 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) y [Sem
 ## Histórico pre-semantic-release
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Refactorización del servidor**: `src/server.ts` monolítico dividido en módulos de dominio (`src/server/mail.ts`, `pass.ts`, `drive.ts`, `calendar.ts`, `ecosystem.ts`, `suite.ts`, `agent.ts`).
+- **Módulo ecosystem** (`src/ecosystem/`): descubrimiento de binarios, instalación y actualización de herramientas del ecosistema Proton.
+- **Cliente Drive real**: migración de rclone a CLI oficial de Proton Drive (`proton-drive`). Tools MCP: `proton_drive_audit`, `proton_drive_status`, `proton_drive_organize`, `proton_drive_format_report`, `proton_drive_sync`.
+- **Bridge MCP tools**: integración con Proton Bridge para diagnóstico y gestión.
+- **Goal `suite-status`**: reporte del estado completo del ecosistema Proton Suite.
+- **Sistema de alertas multi-sink** (`src/alerts/ntfy.ts`). Arquitectura `AlertSink[]` con soporte para Ntfy. `audit()` solo escribe al file sink.
+- **Stubs de Calendar con mensaje preciso**: ahora indican "E2E-encrypted sync, not standard CalDAV".
+- **Tests unitarios de PassClient** (`tests/pass.test.ts`) con dependency injection.
+- **Tests de registro de tools** (`tests/server/tools-registry.test.ts`).
+- **Tests E2E de Drive** (`tests/e2e/drive.e2e.ts`).
+- **Cobertura en CI** (`npm run coverage`) con badge en README.
+- **Workflow `integration.yml`**: tests de integración para Bridge, Drive y Suite.
+- **Documentación de Drive**: `docs/drive-audit.md`, `docs/superpowers/plans/2026-07-10-proton-drive-rsync-audit.md`.
+- **Plan de sprint** (`docs/superpowers/plans/2026-07-17-sprint-bugfixes-pendientes.md`).
+
+### Changed
+
+- **Hash de duplicados en PassClient**: de djb2 a SHA-256 (primeros 16 hex chars).
+- **`list()` de PassClient** ahora lee el filesystem directamente (`fs.readdir` recursivo).
+- **`validatePath()`** rechaza secuencias `..` para prevenir directory traversal.
+- **`insert()` y `generate()` de PassClient** usan `--force`.
+- **`suite-status`** reporta Drive como respaldado por CLI oficial, no como stub.
+- **CI apunta a runner self-hosted** en minipc.
+- **Documentación**: README actualizado con métricas del ecosistema completo.
+- **Dockerfile.bridge**: digest SHA256 actualizado.
+
+### Fixed
+
+- **CVE nodemailer 6→9** (8 CVEs) y **unicorn 59→65** (ReDoS).
+- **Config de Drive**: `drive enabled` derivado de `rcloneRemote`.
+- **Métricas de sync de Drive**: captura desde stderr, `ignore-existing` en push.
+- **Labels del agente**: se aplican vía copy sin carpetas duplicadas.
+- **E2E Pass**: `scripts/e2e-pass.sh` verifica prerequisitos (GPG, pass).
+- **E2E GreenMail**: `scripts/e2e-greenmail.sh` usa `PATH=/usr/bin:$PATH` para `pass` estándar.
+- **Referencias a plantillas**: actualizadas a `Iniciativas-Alexendros/plantillas`.
+- **Dependabot**: prevención de agrupación de major bumps.
+
+## [0.7.0] - 2026-07-17
+
+> **Nota:** No existe versión 0.6.0. El salto de 0.5.0 a 0.7.0 fue intencional para reflejar la expansión del scope de Mail a Suite completa.
+
+### Added
+
+- **Goal `check-imap`**: verificación de conectividad IMAP y diagnóstico del Bridge.
+
+### Changed
+
+- **Rebrand a Proton Suite Agent v0.7.0**: el proyecto abarca Mail, Pass, Calendar y Drive.
+- **State labels y organización por carpetas**: `organize` ahora usa labels de estado y plan de solo carpetas.
+
+### Fixed
+
+- **Labels del agente**: evitar categorías duplicadas en la organización.
 ## [0.5.0] - 2026-07-04
 
 ### Changed
@@ -124,9 +181,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@alexendros/protonmail-mcp` (old npm name) deprecated with `npm deprecate` pointing to the new package.
 
-[Unreleased]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Iniciativas-Alexendros/agent-protonmail/compare/v0.7.0...HEAD
 [0.4.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.4.0
 [0.2.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.2.0
 [0.1.2]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.0
+
+[0.7.0]: https://github.com/Iniciativas-Alexendros/agent-protonmail/releases/tag/v0.7.0
+[0.5.0]: https://github.com/Iniciativas-Alexendros/agent-protonmail/releases/tag/v0.5.0

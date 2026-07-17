@@ -38,6 +38,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
+      # semantic-release sin @semantic-release/git no puede committear
+      # CHANGELOG ni crear tags. Este step lo hace manualmente.
+      - name: Commit CHANGELOG and create git tag
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+
+          if ! git diff --quiet CHANGELOG.md; then
+            git add CHANGELOG.md
+            git commit -m "chore(release): v${VERSION} [skip ci]"
+          fi
+
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
   # ────────────────────────────────────────────────────────────────────
   # Gate semver previo · solo aplica a tags. En push a main pasa-through.
   # Lib en plantillas (Pipelines 2026-05).
