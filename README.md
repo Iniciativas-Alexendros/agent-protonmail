@@ -1,8 +1,9 @@
 # Proton Suite Agent
 
-[![CI](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/ci.yml)
-[![Quality](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/quality.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/quality.yml)
-[![CodeQL](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/protonmail-agent/actions/workflows/codeql.yml)
+[![CI](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/ci.yml)
+[![Quality](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/quality.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/quality.yml)
+[![CodeQL](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonmail/actions/workflows/codeql.yml)
+[![Coverage](https://img.shields.io/badge/coverage-vitest%20v8-blue)](./vitest.config.ts)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](./package.json)
 
@@ -22,8 +23,8 @@
 ### 1. Instalar y compilar
 
 ```bash
-git clone https://github.com/Iniciativas-Alexendros/protonmail-agent.git
-cd protonmail-agent
+git clone https://github.com/Iniciativas-Alexendros/agent-protonmail.git
+cd agent-protonmail
 npm install && npm run build && npm run smoke
 ```
 
@@ -163,7 +164,8 @@ Ver [`scripts/install.sh`](./scripts/install.sh) para la instalación interactiv
 
 ```bash
 npm run typecheck   # TypeScript strict
-npm test            # 218 tests (Vitest)
+npm test            # 230 tests (Vitest)
+npm run coverage    # Coverage (v8)
 npm run build       # Compilación
 npm run smoke       # Verificación stdio
 npm run knip        # Unused deps/exports

@@ -4,6 +4,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Verificar prerequisitos
+for cmd in gpg pass; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "ERROR: $cmd not found in PATH" >&2
+    exit 1
+  fi
+done
+
 GNUPGHOME=$(mktemp -d)
 PASSWORD_STORE_DIR=$(mktemp -d)
 export GNUPGHOME PASSWORD_STORE_DIR

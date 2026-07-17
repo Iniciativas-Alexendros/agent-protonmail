@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import type { Config } from "../config.js";
 import { FileAlertSink } from "./file.js";
-import { SEVERITY_RANK, type AlertEvent, type AlertSeverity } from "./types.js";
+import { NtfyAlertSink } from "./ntfy.js";
+import { SEVERITY_RANK, type AlertEvent, type AlertSeverity, type AlertSink } from "./types.js";
 import { WebhookAlertSink } from "./webhook.js";
 
 export type { AlertEvent, AlertSeverity } from "./types.js";
@@ -16,7 +17,7 @@ export interface Logger {
 
 export class AlertSystem {
   private readonly fileSink: FileAlertSink;
-  private readonly webhookSink?: WebhookAlertSink;
+  private readonly sinks: AlertSink[] = [];
   private readonly minRank: number;
 
   constructor(
@@ -24,9 +25,15 @@ export class AlertSystem {
     private readonly log: Logger,
   ) {
     this.fileSink = new FileAlertSink(cfg.logDir);
+    this.sinks.push(this.fileSink);
     this.minRank = SEVERITY_RANK[cfg.minSeverity];
     if (cfg.webhookUrl) {
-      this.webhookSink = new WebhookAlertSink(cfg.webhookUrl);
+      this.sinks.push(new WebhookAlertSink(cfg.webhookUrl));
+    }
+    if (cfg.ntfy?.url && cfg.ntfy?.topic) {
+      this.sinks.push(
+        new NtfyAlertSink(cfg.ntfy.url, cfg.ntfy.topic, cfg.ntfy.token),
+      );
     }
   }
 
@@ -51,14 +58,13 @@ export class AlertSystem {
     // File and webhook only for configured minimum severity.
     if (SEVERITY_RANK[severity] < this.minRank) return;
 
-    void this.fileSink.emit(event).catch((err: unknown) => {
-      this.log.error("failed to write alert to file", { error: String(err) });
-    });
-
-    if (this.webhookSink) {
-      void this.webhookSink.emit(event).catch((err: unknown) => {
-        this.log.error("failed to send alert webhook", { error: String(err) });
-      });
+    for (const sink of this.sinks) {
+      const result = sink.emit(event);
+      if (result instanceof Promise) {
+        void result.catch((err: unknown) => {
+          this.log.error("alert sink failed", { error: String(err) });
+        });
+      }
     }
   }
 
@@ -87,6 +93,8 @@ export class AlertSystem {
       source,
       context,
     };
-    void this.fileSink.emit(event).catch(() => { /* noop */ });
+    void this.fileSink.emit(event).catch(() => {
+      /* audit trail — best effort */
+    });
   }
 }
