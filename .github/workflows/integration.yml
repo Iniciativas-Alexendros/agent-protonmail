@@ -17,11 +17,15 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm ci
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
 
-      - run: npm run test:integration
+      - run: pnpm run build
+
+      - run: pnpm run test:integration
         env:
           PROTON_INTEGRATION_TEST: 'true'
           PROTON_BRIDGE_USER: ${{ secrets.PROTON_BRIDGE_USER }}
