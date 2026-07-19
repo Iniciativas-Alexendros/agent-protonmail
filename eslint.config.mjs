@@ -50,7 +50,7 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unnecessary-condition": "warn",
       "@typescript-eslint/no-non-null-assertion": "error",
-      "@typescript-eslint/require-await": "warn",
+      "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-unnecessary-type-conversion": "warn",
       "@typescript-eslint/no-unnecessary-type-assertion": "warn",
       "@typescript-eslint/restrict-plus-operands": "off",
