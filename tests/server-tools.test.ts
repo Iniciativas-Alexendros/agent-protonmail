@@ -72,8 +72,8 @@ vi.mock('imapflow', () => {
     getMailboxLock() {
       return { release() {} }
     }
-    async *fetch() {
-      for (const m of imapState.fetchResults) yield m
+    *fetch() {
+      yield* imapState.fetchResults
     }
     fetchOne() {
       return imapState.fetchOneResult

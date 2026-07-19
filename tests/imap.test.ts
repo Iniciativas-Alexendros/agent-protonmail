@@ -79,8 +79,8 @@ vi.mock('imapflow', () => {
         },
       }
     }
-    async *fetch() {
-      for (const m of imapState.fetchResults) yield m
+    *fetch() {
+      yield* imapState.fetchResults
     }
     fetchOne() {
       if (imapState.fetchOneShouldThrow) throw new Error('fetchOne failed')
