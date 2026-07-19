@@ -67,7 +67,9 @@ export async function buildOrganizationPlan(
 
     for (const [category, emails] of byCategory) {
       if (emails.length === 0) continue;
-      const sample = emails[0].classification;
+      const first = emails[0];
+      if (!first) continue;
+      const sample = first.classification;
       const folder = sample.suggestedFolder;
       if (!existingFolders.has(folder)) {
         plan.newFolders.push(folder);

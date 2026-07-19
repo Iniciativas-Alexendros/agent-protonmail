@@ -180,7 +180,8 @@ export async function buildForwardOptions(
   const attachments: SendOptions['attachments'] = []
   if (includeAttachments && original.attachments.length > 0) {
     for (let i = 0; i < original.attachments.length; i++) {
-      const meta = original.attachments[i]
+      const meta = original.attachments[i];
+      if (!meta) continue;
       const data = await imap.getAttachment(mailbox, uid, i)
       if (data) {
         attachments.push({
@@ -220,7 +221,7 @@ export function prefixSubject(
  * separados (pueden venir con saltos de línea y espacios variables).
  */
 export function collectReferences(original: EmailFull): string[] {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+   
   const refsHeader = original.headers.references ?? ''
   const existing: string[] = refsHeader.match(/<[^>]+>/g) ?? []
   if (original.messageId) existing.push(original.messageId)
