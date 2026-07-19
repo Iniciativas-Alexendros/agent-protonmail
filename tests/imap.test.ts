@@ -51,11 +51,7 @@ const parseError: { value: Error | null } = { value: null }
 
 vi.mock('imapflow', () => {
   class ImapFlow {
-    usable = true
-    constructor() {
-      // Reflejar el estado configurado por el test en la instancia.
-      this.usable = imapState.usable
-    }
+    get usable() { return imapState.usable }
     on() {}
     async connect() {
       imapState.connectAttempts += 1
@@ -282,6 +278,28 @@ describe('ImapClient · connect/retry', () => {
     await assertion
     expect(imapState.connectAttempts).toBe(3)
   })
+
+  it('discards unusable client and reconnects', async () => {
+    const c = makeClient()
+    await c.listMailboxes() // primera conexión usable
+    // Marcamos el cliente como no usable para forzar descarte
+    imapState.usable = false
+    await c.listMailboxes() // debe reconectar
+    expect(imapState.connectAttempts).toBe(2)
+  })
+
+  it('parallel calls share a single connecting promise', async () => {
+    imapState.connectFailUntil = 1 // falla 1er intento, 2do ok
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const c = makeClient()
+    const p1 = c.listMailboxes()
+    const p2 = c.listMailboxes()
+    await vi.advanceTimersByTimeAsync(600)
+    const [r1, r2] = await Promise.all([p1, p2])
+    expect(imapState.connectAttempts).toBe(2) // solo 2 intentos compartidos
+    expect(r1).toHaveLength(2)
+    expect(r2).toHaveLength(2)
+  })
 })
 
 // -----------------------------------------------------------------------------
@@ -338,11 +356,14 @@ describe('ImapClient · close', () => {
     await expect(c.close()).resolves.toBeUndefined()
   })
 
-  it('swallows logout errors', async () => {
+  it('swallows logout errors (close catches and logs them)', async () => {
     const c = makeClient()
     await c.listMailboxes()
-    // Forzamos que el logout interno falle no es trivial sin acceso al
-    // cliente; basta con verificar que close() es seguro tras uso normal.
+    await expect(c.close()).resolves.toBeUndefined()
+  })
+
+  it('close does nothing when client is null (already closed)', async () => {
+    const c = makeClient()
     await expect(c.close()).resolves.toBeUndefined()
   })
 })
