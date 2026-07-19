@@ -1,3 +1,13 @@
+/**
+ * Calendar tools — STUB implementation.
+ *
+ * Proton Bridge does not currently expose CalDAV endpoints. Once Bridge
+ * supports calendar, this module should be replaced with a real CalDAV
+ * client using `tsdav` or similar (see spec specs/bridge-mcp/).
+ *
+ * For now, three tools are registered so MCP clients can discover them:
+ * they always return `{ available: false }` with an explanatory message.
+ */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { createLogger } from '../config.js'
 
@@ -8,6 +18,8 @@ export function registerCalendarTools(
   deps: { log: Logger; enabled: boolean },
 ) {
   if (!deps.enabled) return
+
+  deps.log.warn('Calendar tools are stubs — CalDAV not yet exposed by Proton Bridge.')
 
   const unavailable = JSON.stringify({
     available: false,

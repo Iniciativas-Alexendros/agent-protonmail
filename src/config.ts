@@ -58,7 +58,7 @@ const ConfigSchema = z.object({
     allowedOrigins: z.array(z.string()).default([]),
   }),
   alerts: z.object({
-    webhookUrl: z.string().url().optional(),
+    webhookUrl: z.url().optional(),
     minSeverity: z
       .enum(['info', 'warning', 'alert', 'critical'])
       .default('warning'),
@@ -66,19 +66,19 @@ const ConfigSchema = z.object({
     enabled: z.boolean().default(true),
     ntfy: z
       .object({
-        url: z.string().url().optional(),
+        url: z.url().optional(),
         topic: z.string().optional(),
         token: z.string().optional(),
       })
       .optional(),
     slack: z
       .object({
-        webhookUrl: z.string().url().optional(),
+        webhookUrl: z.url().optional(),
       })
       .optional(),
     discord: z
       .object({
-        webhookUrl: z.string().url().optional(),
+        webhookUrl: z.url().optional(),
       })
       .optional(),
   }),
