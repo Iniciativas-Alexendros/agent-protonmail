@@ -114,7 +114,7 @@ export class PassClient {
       const stdout = await this.exec(['show', path], {
         env: { ...process.env, PASSWORD_STORE_DIR: this.storeDir },
       })
-      return stdout.trim().split('\n')[0]
+      return (stdout.trim().split('\n')[0] ?? '')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (

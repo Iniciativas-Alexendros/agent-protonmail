@@ -211,8 +211,8 @@ export class BridgeClient {
       for (const line of lines) {
         const match = /(\S+@\S+)\s+(\w+)/.exec(line.trim())
         if (match) {
-          const state = match[2].toLowerCase() as BridgeAccount['state']
-          accounts.push({ user: match[1], state })
+          const state = match[2]!.toLowerCase() as BridgeAccount['state']
+          accounts.push({ user: match[1]!, state })
         }
       }
       return accounts
