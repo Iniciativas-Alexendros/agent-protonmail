@@ -67,7 +67,10 @@ fi
 # Usamos '|' como delimiter de sed para evitar colisiones con '/' de las URLs.
 BADGE_MARKER='img.shields.io/badge/coverage-'
 if grep -q "$BADGE_MARKER" "$README"; then
-  sed -i "s|^.*${BADGE_MARKER}.*$|${NEW_BADGE}|" "$README"
+  # Escapar & en la URL del badge para que sed no lo interprete como backreference.
+# Si no se escapa, c\/a\&logoColor=white → c\/a$&logoColor (el & duplica el match).
+ESCAPED=$(echo "${NEW_BADGE}" | sed 's|&|\\&|g')
+sed -i "s|^.*${BADGE_MARKER}.*$|${ESCAPED}|" "$README"
   echo "✅ README.md badge updated to $PCT% ($COLOR)"
 else
   echo "❌ No coverage badge found in $README"

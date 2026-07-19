@@ -3,7 +3,7 @@
 [![CI](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/ci.yml)
 [![Quality](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/codeql.yml)
-[![Coverage](https://img.shields.io/badge/coverage-93.72%25-brightgreen?logo=vitest[![Coverage](https://img.shields.io/badge/coverage-93.72%25-brightgreen?logo=vitest[![Coverage](https://img.shields.io/badge/coverage-93.72%25-brightgreen?logo=vitest[![Coverage](https://img.shields.io/badge/coverage-93.72%25-brightgreen?logo=vitest&logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
+[![Coverage](https://img.shields.io/badge/coverage-96.67%25-brightgreen?logo=vitest&logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](./package.json)
 
@@ -165,7 +165,7 @@ Ver [`scripts/install.sh`](./scripts/install.sh) para la instalación interactiv
 ```bash
 npm run typecheck   # TypeScript strict
 npm test            # 745 tests (Vitest)
-npm run coverage    # Coverage (v8 — 93.72% statements)
+npm run coverage    # Coverage (v8 — 96.67% statements)
 npm run build       # Compilación
 npm run smoke       # Verificación stdio
 npm run knip        # Unused deps/exports

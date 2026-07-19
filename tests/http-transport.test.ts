@@ -1,8 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ipKeyGenerator } from "express-rate-limit";
 import request from "supertest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Config } from "../src/config.js";
 import { buildHttpApp } from "../src/http.js";
+
+// Mock ipKeyGenerator para cubrir el fallback "anon" (línea 75 de http.ts).
+// En tests con supertest req.ip siempre es "127.0.0.1", así que sin este mock
+// ipKeyGenerator devuelve una IP real (truthy) y "anon" nunca se ejecuta.
+vi.mock("express-rate-limit", async (importOriginal) => {
+  const actual: object = await importOriginal();
+  return {
+    ...actual,
+    ipKeyGenerator: vi.fn(() => ""),
+  };
+});
 
 const silent = {
   debug: vi.fn(),
@@ -498,6 +510,18 @@ describe("Rate limiter keyGenerator fallback", () => {
     // Auth falla con 401, pero el rate limiter previo debe haber funcionado
     expect(res.status).toBe(401);
     // Verificar que el rate limiter ejecutó el keyGenerator (sin arrojar error)
+    expect(res.body.error).toBe("unauthorized");
+  });
+
+  it("keyGenerator short-circuits at IP when ipKeyGenerator returns truthy", async () => {
+    // Cubre el branch truthy de `ipKeyGenerator(...) ||` en línea 74.
+    // El mock por defecto retorna "" (falsy) para forzar el fallback "anon".
+    // Con mockReturnValueOnce el primer call retorna una IP real (truthy), cubriendo
+    // la rama de short-circuit del operador ||.
+    ipKeyGenerator.mockReturnValueOnce("127.0.0.1" as never);
+    const app = buildHttpApp({ buildServer: miniServer, cfg: cfg(), log: silent });
+    const res = await request(app).post("/mcp").send({ jsonrpc: "2.0", id: 1, method: "x" });
+    expect(res.status).toBe(401);
     expect(res.body.error).toBe("unauthorized");
   });
 });
