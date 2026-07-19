@@ -168,10 +168,67 @@ describe("SmtpClient", () => {
     }));
   });
 
-  it("close() resets the transporter", () => {
+  it("close() resets the transporter after send() readies it", async () => {
+    sendMailMock.mockResolvedValueOnce({
+      messageId: "<close-test@local>",
+      accepted: [],
+      rejected: [],
+      response: "250 OK",
+    });
+
     const smtp = new SmtpClient(makeCfg(), silentLog);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-    expect(() => smtp.close()).not.toThrow();
+    // Primero enviamos para que ensureConnected() cree el transporter
+    await smtp.send({ to: ["bob@example.com"], subject: "s", text: "b" });
+    // close() debe ejecutar el if (this.transporter) true branch
+    expect(() => { smtp.close(); }).not.toThrow();
+    // close() again with null transporter should be noop
+    expect(() => { smtp.close(); }).not.toThrow();
+  });
+
+  it("close() noops when transporter is null", () => {
+    const smtp = new SmtpClient(makeCfg(), silentLog);
+    // Sin send() previo, this.transporter es null → entra en else implícito
+    expect(() => { smtp.close(); }).not.toThrow();
+  });
+
+  it("send() twice — second call hits ensureConnected cache (transporter already set)", async () => {
+    sendMailMock.mockResolvedValue({
+      messageId: "<cache@local>",
+      accepted: [],
+      rejected: [],
+      response: "250 OK",
+    });
+
+    const smtp = new SmtpClient(makeCfg(), silentLog);
+    // Primera llamada: crea el transporter
+    await smtp.send({ to: ["a@b.com"], subject: "First", text: "1" });
+    // Segunda llamada: ensureConnected() ve transporter ya seteado → early return
+    await smtp.send({ to: ["b@c.com"], subject: "Second", text: "2" });
+
+    // sendMail debe haberse llamado dos veces (una por cada send())
+    expect(sendMailMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// escapeHtml (internal helper)
+// ---------------------------------------------------------------------------
+
+describe("escapeHtml", () => {
+  // Importamos via buildForwardOptions que usa escapeHtml internamente
+  it("passes through plain characters (no MAP match → ?? c fallback)", async () => {
+    const email: EmailFull = {
+      ...baseEmail,
+      htmlBody: undefined,
+      textBody: "hello world plain text",
+    };
+    (mockImap as any).getEmail.mockResolvedValueOnce(email);
+    // buildForwardOptions con HTML body → ejecuta escapeHtml(textBody) en htmlBody fallback
+    const result = await buildForwardOptions(
+      mockImap as any, "INBOX", 1, ["bob@example.com"], { html: "<b>Reply</b>" }, false,
+    );
+    expect(result!.html).toContain("hello world");
+    expect(result!.html).toContain("<b>Reply</b>");
   });
 });
 
@@ -407,6 +464,26 @@ describe("buildForwardOptions", () => {
       mockImap as any, "INBOX", 1, ["bob@example.com"], { html: "<b>My HTML</b>" }, false,
     );
     expect(result!.html).toContain("<b>My HTML</b>");
+  });
+
+  it("forward body handles missing fields (?? fallbacks)", async () => {
+    const email: EmailFull = {
+      ...baseEmail,
+      from: undefined,
+      date: undefined,
+      subject: undefined,
+      textBody: undefined,
+      htmlBody: undefined,
+    };
+    (mockImap as any).getEmail.mockResolvedValueOnce(email);
+    const result = await buildForwardOptions(
+      mockImap as any, "INBOX", 1, ["bob@example.com"], { text: "Forward" }, false,
+    );
+    expect(result!.subject).toBe("Fwd: ");
+    expect(result!.text).toContain("Forward");
+    expect(result!.text).toContain("Forwarded message");
+    // html debe ser undefined porque body no tiene html y original no tiene htmlBody
+    expect(result!.html).toBeUndefined();
   });
 });
 
