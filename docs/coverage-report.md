@@ -1,16 +1,16 @@
 # Coverage Report
 
-**Generado:** 2026-07-19 — vitest + @vitest/coverage-v8 (post-http.ts gap closed)
+**Generado:** 2026-07-19 — vitest + @vitest/coverage-v8 (post-ESLint endurecimiento)
 
 ## Resumen global
 
 | Métrica | Valor | Diferencia vs anterior |
 |---------|-------|----------------------|
-| **Statements** | **96.67%** | **+1.55pp** |
-| Branches | 91.04% | +0.34pp |
-| **Functions** | **96.09%** | +0.53pp |
-| Lines | 96.67% | +1.55pp |
-| Tests | 804 / 42 files | **+8 tests** |
+| **Statements** | **98.00%** | **+1.33pp** |
+| Branches | 92.23% | +1.19pp |
+| **Functions** | **97.39%** | +1.30pp |
+| Lines | 98.00% | +1.33pp |
+| Tests | 819 / 42 files | **+15 tests** |
 
 ## Todos los módulos ordenados por cobertura (ascendente)
 
@@ -18,27 +18,27 @@
 |---|--------|-------|--------|-------|--------|
 | 1 | `src/agent/types.ts` | **0%** | 0% | 0% | 🟡 stub |
 | 2 | `src/agent-cli.ts` | **0%** | 100% | 100% | 🟡 CLI entry |
-| 3 | `src/bridge/bridge-client.ts` | **88.56%** | 92.38% | 94.73% | 🟢 |
-| 4 | `src/config.ts` | **90.71%** | 95.23% | 95.23% | 🟢 |
-| 5 | `src/ecosystem/discovery.ts` | **93.57%** | 86.84% | 100% | ✅ |
-| 6 | `src/imap.ts` | **93.61%** | 91.34% | 84.61% | ✅ |
-| 7 | `src/agent/executor.ts` | **93.77%** | 87.23% | 100% | ✅ |
-| 8 | `src/diagnostics.ts` | **93.78%** | 82.05% | 87.50% | ✅ |
-| 9 | `src/drive-audit.ts` | **94.16%** | 94.11% | 100% | ✅ |
-| 10 | `src/drive.ts` | **94.37%** | 90.90% | 100% | ✅ |
-| 11 | `src/ecosystem/updater.ts` | **96.42%** | 90.47% | 100% | ✅ |
-| 12 | `src/agent/organizer.ts` | **97.67%** | 72.13% | 100% | ✅ |
-| 13 | `src/server/suite.ts` | **98.38%** | 92.30% | 100% | ✅ |
-| 14 | `src/alerts/index.ts` | **98.66%** | 100% | 100% | ✅ |
-| 15 | `src/pass.ts` | **99.10%** | 87.03% | 100% | ✅ |
-| 16 | `src/server/drive.ts` | **99.49%** | 85.22% | 100% | ✅ |
-| 17 | `src/server/pass.ts` | **99.56%** | 95.23% | 100% | ✅ |
-| 18 | `src/addresses.ts` | **100%** | 89.65% | 100% | ✅ |
-| 19 | `src/auth.ts` | **100%** | 100% | 100% | ✅ |
+| 3 | `src/ecosystem/discovery.ts` | **93.57%** | 86.84% | 100% | ✅ |
+| 4 | `src/agent/executor.ts` | **93.77%** | 87.23% | 100% | ✅ |
+| 5 | `src/bridge/bridge-client.ts` | **95.01%** | 96.63% | 100% | ✅ |
+| 6 | `src/imap.ts` | **95.21%** | 93.33% | 84.61% | ✅ |
+| 7 | `src/ecosystem/updater.ts` | **96.42%** | 90.47% | 100% | ✅ |
+| 8 | `src/agent/organizer.ts` | **97.67%** | 72.13% | 100% | ✅ |
+| 9 | `src/server/suite.ts` | **98.38%** | 92.30% | 100% | ✅ |
+| 10 | `src/alerts/index.ts` | **98.66%** | 100% | 100% | ✅ |
+| 11 | `src/pass.ts` | **99.10%** | 87.03% | 100% | ✅ |
+| 12 | `src/server/drive.ts` | **99.49%** | 85.22% | 100% | ✅ |
+| 13 | `src/server/pass.ts` | **99.56%** | 95.23% | 100% | ✅ |
+| 14 | `src/addresses.ts` | **100%** | 89.65% | 100% | ✅ |
+| 15 | `src/auth.ts` | **100%** | 100% | 100% | ✅ |
+| 16 | `src/config.ts` | **100%** | 95.55% | 95.23% | ✅ |
+| 17 | `src/diagnostics.ts` | **100%** | 84.78% | 100% | ✅ |
+| 18 | `src/drive-audit.ts` | **100%** | 100% | 100% | ✅ |
+| 19 | `src/drive.ts` | **100%** | 100% | 100% | ✅ |
 | 20 | `src/http.ts` | **100%** | 97.22% | 100% | ✅ |
 | 21 | `src/security.ts` | **100%** | 100% | 100% | ✅ |
 | 22 | `src/server.ts` | **100%** | 95.34% | 80% | ✅ |
-| 23 | `src/smtp.ts` | **100%** | 93.75% | 100% | ✅ |
+| 23 | `src/smtp.ts` | **100%** | 93.58% | 100% | ✅ |
 | 24 | `src/version.ts` | **100%** | 100% | 100% | ✅ |
 | 25 | `src/which.ts` | **100%** | 100% | 100% | ✅ |
 | 26 | `src/agent/goals.ts` | **100%** | 100% | 100% | ✅ |
@@ -66,19 +66,19 @@
 
 ## Por grupo
 
-### `src/` — 94.28% statements
+### `src/` — 98.00% statements
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
 | agent-cli.ts | 0% | 100% | 100% | 0% |
-| config.ts | 90.71% | 95.23% | 95.23% | 90.71% |
+| config.ts | **100%** | **95.55%** | 95.23% | **100%** |
 | **http.ts** | **100%** | **97.22%** | 100% | **100%** |
-| **smtp.ts** | **100%** | **93.75%** | 100% | **100%** |
+| **smtp.ts** | **100%** | **93.58%** | 100% | **100%** |
 | **server.ts** | **100%** | **95.34%** | 80% | **100%** |
-| imap.ts | 93.61% | 91.34% | 84.61% | 93.61% |
-| diagnostics.ts | 93.78% | 82.05% | 87.50% | 93.78% |
-| drive.ts | 94.37% | 90.90% | 100% | 94.37% |
-| drive-audit.ts | 94.16% | 94.11% | 100% | 94.16% |
+| imap.ts | 95.21% | 93.33% | 84.61% | 95.21% |
+| diagnostics.ts | **100%** | **84.78%** | 100% | **100%** |
+| drive.ts | **100%** | **100%** | 100% | **100%** |
+| drive-audit.ts | **100%** | **100%** | 100% | **100%** |
 | pass.ts | 99.10% | 87.03% | 100% | 99.10% |
 | addresses.ts | 100% | 89.65% | 100% | 100% |
 | auth.ts | 100% | 100% | 100% | 100% |
@@ -108,11 +108,11 @@
 | types.ts | 100% | 100% | 100% | 100% |
 | webhook.ts | 100% | 100% | 100% | 100% |
 
-### `src/bridge/` — 88.56% statements
+### `src/bridge/` — 95.01% statements
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
-| bridge-client.ts | 88.56% | 92.38% | 94.73% | 88.56% |
+| bridge-client.ts | 95.01% | 96.63% | 100% | 95.01% |
 
 ### `src/config/` — 100% statements
 
@@ -151,7 +151,8 @@
 
 | Fecha | Statements | Branches | Tests | Archivos | Hitos |
 |-------|-----------|----------|-------|----------|-------|
-| **Jul 2026 (post-http.ts gap)** | **96.67%** | **91.04%** | **804** | **42** | http.ts 99%→100%, smtp.ts 98%→100%, coverage badge bugfix |
+| **Jul 2026 (ESLint endurecimiento)** | **98.00%** | **92.23%** | **819** | **42** | Config.ts 90%→100% (z.url()), bridge-client 88%→95% (+3 tests), ESLint reglas off restantes |
+| Jul 2026 (post-http.ts gap) | 96.67% | 91.04% | 804 | 42 | http.ts 99%→100%, smtp.ts 98%→100%, coverage badge bugfix |
 | Jul 2026 (post-Ronda 8) | 95.12% | 91.70% | 796 | 42 | server.ts branches 82%→95%, http.ts 99%, config/drive.ts 100% |
 | Jul 2026 (Ronda 3b) | 93.72% | 89.50% | 745 | 42 | server/drive.ts 89%→99% (+43 tests) |
 | Jul 2026 (Ronda 2) | 92.68% | 89.50% | 692 | 41 | server.ts 73%→96%, smtp.ts 79%→98% |
