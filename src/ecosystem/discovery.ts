@@ -106,8 +106,8 @@ function parseHelpOutput(help: string, _product: string): Subcommand[] {
     const match = /^\s{2}(\S+)\s+(.+)$/.exec(trimmed)
     if (match) {
       subs.push({
-        name: match[1]!,
-        description: match[2]!.trim(),
+        name: match[1] ?? '',
+        description: (match[2] ?? '').trim(),
       })
     }
   }
@@ -123,7 +123,7 @@ function parseHelpOutput(help: string, _product: string): Subcommand[] {
       if (inCommands && line.trim()) {
         const m = /^(\S+)\s+(.+)$/.exec(line.trim())
         if (m) {
-          subs.push({ name: m[1]!, description: m[2]!.trim() })
+          subs.push({ name: m[1] ?? '', description: (m[2] ?? '').trim() })
         }
       }
       if (inCommands && !line.trim()) inCommands = false

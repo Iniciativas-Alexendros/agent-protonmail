@@ -123,9 +123,9 @@ function scoreRule(text: string, rule: Rule): number {
 export function classifyEmail(input: { from?: string; subject?: string; text?: string; html?: string }): ClassificationResult {
   const text = normalizeText(input);
   const scores = RULES.map((rule) => ({ rule, score: scoreRule(text, rule) })).sort((a, b) => b.score - a.score);
-  const best = scores[0]!;
+  const best = scores[0];
 
-  if (best.score === 0) {
+  if (!best || best.score === 0) {
     return {
       category: "uncategorized",
       confidence: 0,

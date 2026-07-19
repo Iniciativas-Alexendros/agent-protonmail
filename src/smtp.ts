@@ -180,7 +180,8 @@ export async function buildForwardOptions(
   const attachments: SendOptions['attachments'] = []
   if (includeAttachments && original.attachments.length > 0) {
     for (let i = 0; i < original.attachments.length; i++) {
-      const meta = original.attachments[i]!
+      const meta = original.attachments[i];
+      if (!meta) continue;
       const data = await imap.getAttachment(mailbox, uid, i)
       if (data) {
         attachments.push({

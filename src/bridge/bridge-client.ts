@@ -210,9 +210,8 @@ export class BridgeClient {
       const lines = raw.split('\n')
       for (const line of lines) {
         const match = /(\S+@\S+)\s+(\w+)/.exec(line.trim())
-        if (match) {
-          const state = match[2]!.toLowerCase() as BridgeAccount['state']
-          accounts.push({ user: match[1]!, state })
+        if (match?.[1] && match?.[2]) {
+          accounts.push({ user: match[1], state: match[2].toLowerCase() as BridgeAccount['state'] })
         }
       }
       return accounts
@@ -233,26 +232,27 @@ export class BridgeClient {
     this.child = execFile(this.bin, ['--cli'], {
       timeout: SPAWN_PROMPT_TIMEOUT,
     })
+    const child = this.child
 
     await new Promise<void>((resolve, reject) => {
       let out = ''
       const timer = setTimeout(() => {
-        this.child?.kill()
+        child?.kill()
         reject(new Error('spawn timeout'))
       }, SPAWN_PROMPT_TIMEOUT)
 
-      this.child!.stdout?.on('data', (d: string) => {
+      child.stdout?.on('data', (d: string) => {
         out += d
         if (out.includes('>>>')) {
           clearTimeout(timer)
           resolve()
         }
       })
-      this.child!.on('error', (err) => {
+      child.on('error', (err) => {
         clearTimeout(timer)
         reject(err)
       })
-      this.child!.on('close', (code) => {
+      child.on('close', (code) => {
         if (!out.includes('>>>')) {
           clearTimeout(timer)
           reject(new Error(`bridge exited with ${code}`))
@@ -263,19 +263,20 @@ export class BridgeClient {
 
   async shutdown(): Promise<void> {
     if (!this.child || this.child.killed) return
+    const child = this.child
 
     try {
-      this.child.stdin?.write('exit\n')
+      child.stdin?.write('exit\n')
     } catch {
       // process already dead
     }
 
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
-        this.child?.kill('SIGTERM')
+        child?.kill('SIGTERM')
         resolve()
       }, 5_000)
-      this.child!.on('close', () => {
+      child.on('close', () => {
         clearTimeout(timer)
         resolve()
       })
