@@ -46,7 +46,7 @@ jobs:
         run: bash scripts/update-coverage-badge.sh --skip-run
 
       - name: Deploy badge to gh-pages
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475c49a8f5667c3c # v4
+        uses: peaceiris/actions-gh-pages@1ef5a1b1df4c63fe21a2242edbee6cac921ece01 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./coverage
