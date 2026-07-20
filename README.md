@@ -181,17 +181,23 @@ npm run knip        # Unused deps/exports
 
 ---
 
-**Próximo módulo objetivo:** bridge-client.ts (80%), config.ts (79.23%), config/drive.ts (82.14%).
+**Próximo módulo objetivo (branches <95%)** — agrupado por dominio:
+- **Agent:** `agent/organizer.ts` (74.20%), `agent/executor.ts` (87.20%)
+- **MCP surface:** `server/drive.ts` (88.00%), `server/mail.ts` (89.60%)
+- **Ecosystem:** `ecosystem/discovery.ts` (86.80%)
 
 ### Progreso de cobertura
 
-| Fecha | Statements | Tests | Archivos | Hitos |
-|-------|-----------|-------|----------|-------|
-| Jul 2026 (Ronda 3b) | **93.72%** | **745** | **42** | server/drive.ts 89%→99%, http.ts +10 tests CORS/auth |
-| Jul 2026 (Ronda 2) | 92.68% | 692 | 41 | server.ts 73%→96%, smtp.ts 79%→98%, alerts/index.ts 76%→98% |
-| Jul 2026 (post-merge) | 90.65% | 619 | 38 | Repo renombrado, PRs #65 y #66 fusionados |
-| Jul 2026 (previo) | 90.67% | 640 | 42 | server/agent 64%→100%, organizer 68%→98%, http 69%→81%, rules 71%→100% |
-| Jun 2026 (base) | 61.7% | 258 | 21 | Reporte inicial |
+| Fecha | Statements | Branches | Tests | Archivos | Hitos |
+|-------|-----------|----------|-------|----------|-------|
+| Jul 2026 (Branch hunt) | **98.07%** | **93.63%** | **864** | **43** | diagnostics.ts 84%→96%, addresses.ts 90%→100%, pass.ts 87%→95% — Branch hunt top-3 cerrado |
+| Jul 2026 (Ronda 3b) | 93.72% | — | 745 | 42 | server/drive.ts 89%→99%, http.ts +10 tests CORS/auth |
+| Jul 2026 (Ronda 2) | 92.68% | — | 692 | 41 | server.ts 73%→96%, smtp.ts 79%→98%, alerts/index.ts 76%→98% |
+| Jul 2026 (post-merge) | 90.65% | 86.46% | 619 | 38 | Repo renombrado, PRs #65 y #66 fusionados |
+| Jul 2026 (previo) | 90.67% | — | 640 | 42 | server/agent 64%→100%, organizer 68%→98%, http 69%→81%, rules 71%→100% |
+| Jun 2026 (base) | 61.7% | — | 258 | 21 | Reporte inicial |
+
+*Conteo de tests canónico: `npx vitest run 2>&1 | grep -E 'Test Files|Tests'`. Los modos `vitest run --coverage` y `vitest list` pueden diferir ligeramente por su modelo de carga (transform/collect timing).*
 
 
 ## Licencia
