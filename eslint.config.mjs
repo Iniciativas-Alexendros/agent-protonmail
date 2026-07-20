@@ -85,7 +85,7 @@ export default tseslint.config(
       "@typescript-eslint/no-deprecated": "warn",
       "@typescript-eslint/no-non-null-assertion": "warn",
       "@typescript-eslint/require-await": "error",
-      "@typescript-eslint/restrict-plus-operands": "off",
+      "@typescript-eslint/restrict-plus-operands": "warn",
       "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/no-dynamic-delete": "off",
       "@typescript-eslint/no-redundant-type-constituents": "off",
