@@ -7,6 +7,24 @@ import {
 } from '../src/agent/index.js'
 import type { GoalContext } from '../src/agent/index.js'
 
+// Mock setup module for discover/setup/pass-audit goals — no I/O real
+vi.mock('../src/agent/setup.js', () => ({
+  runSetup: vi.fn(),
+}))
+import { runSetup } from '../src/agent/setup.js'
+
+// Mock DriveClient for executor drive goal tests
+const mockDriveClient = {
+  stagingDir: '/tmp/staging',
+  listFiles: vi.fn(),
+  upload: vi.fn(),
+  download: vi.fn(),
+}
+
+vi.mock('../src/drive.js', () => ({
+  DriveClient: vi.fn().mockImplementation(() => mockDriveClient),
+}))
+
 describe('agent goals', () => {
   it('parses known goals', () => {
     expect(parseGoal('discover')).toBe('discover')

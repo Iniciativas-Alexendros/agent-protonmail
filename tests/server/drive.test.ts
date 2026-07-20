@@ -41,6 +41,7 @@ vi.mock("../../src/drive-audit.js", () => ({
 // ---------------------------------------------------------------------------
 
 const mockDriveClient = {
+  opts: { cliBin: "/usr/bin/proton-drive" },
   stagingDir: "/tmp/staging",
   execCli: vi.fn(),
   listFiles: vi.fn(),
@@ -150,6 +151,7 @@ beforeEach(() => {
   mockDriveClient.copyFiles.mockResolvedValue({ ok: true });
   mockDriveClient.mkdir.mockResolvedValue({ ok: true });
   mockDriveClient.removeFiles.mockResolvedValue({ ok: true });
+  mockDriveClient.checkDeps.mockReturnValue({ ok: true, version: "0.8.0" });
 });
 
 function makeCfg(enabled = true): Config {
@@ -201,7 +203,7 @@ describe("registerDriveTools", () => {
       log: silentLog,
       driveClient: mockDriveClient,
     });
-    expect(capturedTools.size).toBe(12);
+    expect(capturedTools.size).toBe(14);
   });
 });
 
@@ -220,7 +222,7 @@ describe("proton_drive_audit", () => {
 
   it("returns markdown report by default", async () => {
     const tool = capturedTools.get("proton_drive_audit")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("Proton Drive Audit");
@@ -232,7 +234,7 @@ describe("proton_drive_audit", () => {
 
   it("returns JSON report with response_format=json", async () => {
     const tool = capturedTools.get("proton_drive_audit")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       response_format: "json",
     } as never);
 
@@ -244,7 +246,7 @@ describe("proton_drive_audit", () => {
 
   it("uses custom staging_dir when provided", async () => {
     const tool = capturedTools.get("proton_drive_audit")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       staging_dir: "/custom/path",
     } as never);
 
@@ -257,7 +259,7 @@ describe("proton_drive_audit", () => {
     });
 
     const tool = capturedTools.get("proton_drive_audit")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("permission denied");
@@ -274,12 +276,31 @@ describe("proton_drive_audit", () => {
     });
 
     const tool = capturedTools.get("proton_drive_audit")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).not.toContain("Duplicates");
     expect(text).not.toContain("Obsolete formats");
     expect(text).toContain("By extension");
+  });
+
+  it("muestra (none) para archivos sin extensión en el report markdown", async () => {
+    mockAuditor.scanInventory.mockReturnValue({
+      totalFiles: 3,
+      totalBytes: 300,
+      byExt: { "": 1, ".md": 2 },
+      byDir: { "/": 3 },
+      files: [
+        { name: "README", path: "README", ext: "", size: 100, modified: new Date() },
+        { name: "a.md", path: "a.md", ext: ".md", size: 200, modified: new Date() },
+      ],
+    });
+
+    const tool = capturedTools.get("proton_drive_audit")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("`(none)`: 1");
   });
 });
 
@@ -294,7 +315,7 @@ describe("proton_drive_status", () => {
 
   it("returns markdown status by default", async () => {
     const tool = capturedTools.get("proton_drive_status")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("Proton Drive Status");
@@ -305,7 +326,7 @@ describe("proton_drive_status", () => {
 
   it("returns JSON status with response_format=json", async () => {
     const tool = capturedTools.get("proton_drive_status")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       response_format: "json",
     } as never);
 
@@ -318,7 +339,7 @@ describe("proton_drive_status", () => {
     mockDriveClient.status.mockRejectedValue(new Error("bridge offline"));
 
     const tool = capturedTools.get("proton_drive_status")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("bridge offline");
@@ -352,11 +373,28 @@ describe("proton_drive_status", () => {
     });
 
     const tool = capturedTools.get("proton_drive_status")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("**Authenticated:** n/a");
     expect(text).toContain("**Staging exists:** no");
+  });
+
+  it("incluye línea de error en markdown cuando st.error está definido", async () => {
+    mockDriveClient.status.mockResolvedValue({
+      ok: true,
+      configured: true,
+      authenticated: true,
+      stagingExists: true,
+      cliPath: "/usr/bin/proton-drive",
+      error: "Bridge not responding",
+    });
+
+    const tool = capturedTools.get("proton_drive_status")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("**Error:** Bridge not responding");
   });
 });
 
@@ -371,7 +409,7 @@ describe("proton_drive_organize", () => {
 
   it("returns dry-run plan by default", async () => {
     const tool = capturedTools.get("proton_drive_organize")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       dry_run: true,
     } as never);
 
@@ -388,7 +426,7 @@ describe("proton_drive_organize", () => {
     vi.mocked(renameSync).mockReturnValue(undefined);
 
     const tool = capturedTools.get("proton_drive_organize")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       dry_run: false,
     } as never);
 
@@ -401,7 +439,7 @@ describe("proton_drive_organize", () => {
     vi.mocked(renameSync).mockReturnValue(undefined);
 
     const tool = capturedTools.get("proton_drive_organize")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       dry_run: false,
     } as never);
 
@@ -413,7 +451,7 @@ describe("proton_drive_organize", () => {
 
   it("uses custom staging_dir", async () => {
     const tool = capturedTools.get("proton_drive_organize")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       staging_dir: "/custom",
     } as never);
 
@@ -426,7 +464,7 @@ describe("proton_drive_organize", () => {
     });
 
     const tool = capturedTools.get("proton_drive_organize")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("disk error");
@@ -444,7 +482,7 @@ describe("proton_drive_format_report", () => {
 
   it("returns markdown format report by default", async () => {
     const tool = capturedTools.get("proton_drive_format_report")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("Proton Drive Format Report");
@@ -455,7 +493,7 @@ describe("proton_drive_format_report", () => {
 
   it("returns JSON format report with response_format=json", async () => {
     const tool = capturedTools.get("proton_drive_format_report")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       response_format: "json",
     } as never);
 
@@ -466,7 +504,7 @@ describe("proton_drive_format_report", () => {
 
   it("uses custom staging_dir", async () => {
     const tool = capturedTools.get("proton_drive_format_report")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       staging_dir: "/other",
     } as never);
 
@@ -479,7 +517,7 @@ describe("proton_drive_format_report", () => {
     });
 
     const tool = capturedTools.get("proton_drive_format_report")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("corrupt inventory");
@@ -495,7 +533,7 @@ describe("proton_drive_format_report", () => {
     });
 
     const tool = capturedTools.get("proton_drive_format_report")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("## Extensions");
@@ -515,7 +553,7 @@ describe("proton_drive_list_files", () => {
 
   it("returns markdown file list by default", async () => {
     const tool = capturedTools.get("proton_drive_list_files")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/my-files",
     } as never);
 
@@ -527,7 +565,7 @@ describe("proton_drive_list_files", () => {
 
   it("returns JSON file list with response_format=json", async () => {
     const tool = capturedTools.get("proton_drive_list_files")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       response_format: "json",
     } as never);
 
@@ -538,7 +576,7 @@ describe("proton_drive_list_files", () => {
 
   it("uses custom remote_path", async () => {
     const tool = capturedTools.get("proton_drive_list_files")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       remote_path: "/Documents",
     } as never);
 
@@ -554,7 +592,7 @@ describe("proton_drive_list_files", () => {
     });
 
     const tool = capturedTools.get("proton_drive_list_files")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("List failed");
@@ -564,10 +602,46 @@ describe("proton_drive_list_files", () => {
     mockDriveClient.listFiles.mockRejectedValue(new Error("timeout"));
 
     const tool = capturedTools.get("proton_drive_list_files")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("timeout");
+  });
+
+  it("usa path cuando está definido y omite size ausente", async () => {
+    mockDriveClient.listFiles.mockResolvedValue({
+      ok: true,
+      files: [
+        { path: "/docs/report.pdf", name: "report.pdf", size: 2048 },
+        { path: "/readme.txt", name: "readme.txt" },
+      ],
+    });
+
+    const tool = capturedTools.get("proton_drive_list_files")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("/docs/report.pdf");
+    expect(text).toContain("(2048 bytes)");
+    expect(text).toContain("/readme.txt");
+  });
+
+  it("muestra (unknown) cuando file no tiene path ni name", async () => {
+    mockDriveClient.listFiles.mockResolvedValue({
+      ok: true,
+      files: [
+        { name: "report.pdf", size: 2048 },
+        { size: 512 },  // sin path ni name → f.name ?? '(unknown)' = '(unknown)'
+      ],
+    });
+
+    const tool = capturedTools.get("proton_drive_list_files")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("report.pdf");
+    expect(text).toContain("(unknown)");
+    expect(text).toContain("(512 bytes)");
   });
 });
 
@@ -582,7 +656,7 @@ describe("proton_drive_download", () => {
 
   it("downloads to staging dir by default", async () => {
     const tool = capturedTools.get("proton_drive_download")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("Downloaded");
@@ -590,7 +664,7 @@ describe("proton_drive_download", () => {
 
   it("uses custom local_path when provided", async () => {
     const tool = capturedTools.get("proton_drive_download")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       local_path: "/custom",
     } as never);
 
@@ -606,7 +680,7 @@ describe("proton_drive_download", () => {
     });
 
     const tool = capturedTools.get("proton_drive_download")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("Download failed");
@@ -616,7 +690,7 @@ describe("proton_drive_download", () => {
     mockDriveClient.download.mockRejectedValue(new Error("network error"));
 
     const tool = capturedTools.get("proton_drive_download")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("network error");
@@ -634,7 +708,7 @@ describe("proton_drive_upload", () => {
 
   it("uploads staging dir to /my-files by default", async () => {
     const tool = capturedTools.get("proton_drive_upload")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     const text = (result as any).content[0].text;
     expect(text).toContain("Uploaded");
@@ -643,7 +717,7 @@ describe("proton_drive_upload", () => {
 
   it("uses custom paths when provided", async () => {
     const tool = capturedTools.get("proton_drive_upload")!;
-    await (tool.handler as (args: never) => unknown)({
+    await (tool.handler)({
       local_path: "/custom",
       remote_path: "/other",
     } as never);
@@ -660,7 +734,7 @@ describe("proton_drive_upload", () => {
     });
 
     const tool = capturedTools.get("proton_drive_upload")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("Upload failed");
@@ -670,7 +744,7 @@ describe("proton_drive_upload", () => {
     mockDriveClient.upload.mockRejectedValue(new Error("auth expired"));
 
     const tool = capturedTools.get("proton_drive_upload")!;
-    const result = await (tool.handler as (args: never) => unknown)({} as never);
+    const result = await (tool.handler)({} as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("auth expired");
@@ -688,7 +762,7 @@ describe("proton_drive_share", () => {
 
   it("shares a path and returns confirmation", async () => {
     const tool = capturedTools.get("proton_drive_share")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/shared",
       user_email: "user@test.com",
     } as never);
@@ -707,7 +781,7 @@ describe("proton_drive_share", () => {
     });
 
     const tool = capturedTools.get("proton_drive_share")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/shared",
       user_email: "user@test.com",
     } as never);
@@ -720,7 +794,7 @@ describe("proton_drive_share", () => {
     mockDriveClient.share.mockRejectedValue(new Error("API error"));
 
     const tool = capturedTools.get("proton_drive_share")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/shared",
       user_email: "user@test.com",
     } as never);
@@ -741,7 +815,7 @@ describe("proton_drive_move", () => {
 
   it("moves a path and returns confirmation", async () => {
     const tool = capturedTools.get("proton_drive_move")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       from: "/a",
       to: "/b",
     } as never);
@@ -754,7 +828,7 @@ describe("proton_drive_move", () => {
     mockDriveClient.moveFiles.mockResolvedValue({ ok: false, error: "no such file" });
 
     const tool = capturedTools.get("proton_drive_move")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       from: "/a",
       to: "/b",
     } as never);
@@ -775,7 +849,7 @@ describe("proton_drive_copy", () => {
 
   it("copies a path and returns confirmation", async () => {
     const tool = capturedTools.get("proton_drive_copy")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       from: "/s",
       to: "/d",
     } as never);
@@ -788,7 +862,7 @@ describe("proton_drive_copy", () => {
     mockDriveClient.copyFiles.mockResolvedValue({ ok: false, error: "path conflict" });
 
     const tool = capturedTools.get("proton_drive_copy")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       from: "/s",
       to: "/d",
     } as never);
@@ -809,7 +883,7 @@ describe("proton_drive_create_folder", () => {
 
   it("creates a folder and returns confirmation", async () => {
     const tool = capturedTools.get("proton_drive_create_folder")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/new",
     } as never);
 
@@ -821,7 +895,7 @@ describe("proton_drive_create_folder", () => {
     mockDriveClient.mkdir.mockResolvedValue({ ok: false, error: "already exists" });
 
     const tool = capturedTools.get("proton_drive_create_folder")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/new",
     } as never);
 
@@ -841,7 +915,7 @@ describe("proton_drive_remove", () => {
 
   it("removes a path and returns confirmation", async () => {
     const tool = capturedTools.get("proton_drive_remove")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/old",
     } as never);
 
@@ -853,11 +927,191 @@ describe("proton_drive_remove", () => {
     mockDriveClient.removeFiles.mockResolvedValue({ ok: false, error: "permission denied" });
 
     const tool = capturedTools.get("proton_drive_remove")!;
-    const result = await (tool.handler as (args: never) => unknown)({
+    const result = await (tool.handler)({
       remote_path: "/old",
     } as never);
 
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("permission denied");
+  });
+});
+
+describe("proton_drive_auth_status", () => {
+  beforeEach(() => {
+    registerDriveTools({ registerTool: mockRegister } as never, {
+      cfg: makeCfg(true),
+      log: silentLog,
+      driveClient: mockDriveClient,
+    });
+  });
+
+  it("returns markdown auth status when authenticated", async () => {
+    mockDriveClient.checkDeps.mockReturnValue({ ok: true, version: "0.8.0" });
+    mockDriveClient.status.mockResolvedValue({
+      ok: true,
+      configured: true,
+      authenticated: true,
+      stagingExists: true,
+      cliPath: "/usr/bin/proton-drive",
+    });
+
+    const tool = capturedTools.get("proton_drive_auth_status")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Proton Drive Auth Status");
+    expect(text).toContain("**CLI installed:** yes");
+    expect(text).toContain("**CLI version:** 0.8.0");
+    expect(text).toContain("**Authenticated:** yes");
+  });
+
+  it("returns markdown when not authenticated", async () => {
+    mockDriveClient.checkDeps.mockReturnValue({ ok: true, version: "0.8.0" });
+    mockDriveClient.status.mockResolvedValue({
+      ok: true,
+      configured: true,
+      authenticated: false,
+      stagingExists: false,
+      cliPath: "/usr/bin/proton-drive",
+    });
+
+    const tool = capturedTools.get("proton_drive_auth_status")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("**Authenticated:** no");
+  });
+
+  it("returns markdown when CLI is not installed", async () => {
+    mockDriveClient.checkDeps.mockReturnValue({
+      ok: false,
+      error: "proton-drive not found",
+    });
+    mockDriveClient.status.mockResolvedValue({
+      ok: false,
+      configured: true,
+      authenticated: false,
+      stagingExists: false,
+      cliPath: "/usr/bin/proton-drive",
+    });
+
+    const tool = capturedTools.get("proton_drive_auth_status")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("**CLI installed:** no");
+    expect(text).toContain("**CLI error:** proton-drive not found");
+  });
+
+  it("returns JSON auth status", async () => {
+    mockDriveClient.checkDeps.mockReturnValue({ ok: true, version: "0.8.0" });
+
+    const tool = capturedTools.get("proton_drive_auth_status")!;
+    const result = await (tool.handler)({
+      response_format: "json",
+    } as never);
+
+    const parsed = JSON.parse((result as any).content[0].text);
+    expect(parsed.cliInstalled).toBe(true);
+    expect(parsed.authenticated).toBe(true);
+  });
+
+  it("returns error when status throws", async () => {
+    mockDriveClient.status.mockRejectedValue(new Error("bridge unreachable"));
+
+    const tool = capturedTools.get("proton_drive_auth_status")!;
+    const result = await (tool.handler)({} as never);
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("bridge unreachable");
+  });
+});
+
+describe("proton_drive_auth_login", () => {
+  beforeEach(() => {
+    registerDriveTools({ registerTool: mockRegister } as never, {
+      cfg: makeCfg(true),
+      log: silentLog,
+      driveClient: mockDriveClient,
+    });
+  });
+
+  it("returns already authenticated message when status says authenticated", async () => {
+    mockDriveClient.status.mockResolvedValue({
+      ok: true,
+      configured: true,
+      authenticated: true,
+      stagingExists: true,
+      cliPath: "/usr/bin/proton-drive",
+    });
+
+    const tool = capturedTools.get("proton_drive_auth_login")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Already authenticated");
+    expect((result as any).structuredContent.alreadyAuthenticated).toBe(true);
+  });
+
+  it("returns login instructions when not authenticated", async () => {
+    mockDriveClient.status.mockResolvedValue({
+      ok: false,
+      configured: true,
+      authenticated: false,
+      stagingExists: false,
+      cliPath: "/usr/bin/proton-drive",
+    });
+    mockDriveClient.execCli.mockRejectedValue(new Error("interactive prompt not supported"));
+
+    const tool = capturedTools.get("proton_drive_auth_login")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Proton Drive Authentication");
+    expect(text).toContain("proton-drive auth login");
+    expect(text).toContain("terminal");
+    expect((result as any).structuredContent.requiresInteractiveLogin).toBe(true);
+  });
+
+  it("skips auth check when force=true and returns instructions", async () => {
+    mockDriveClient.execCli.mockRejectedValue(new Error("interactive prompt not supported"));
+
+    const tool = capturedTools.get("proton_drive_auth_login")!;
+    const result = await (tool.handler)({
+      force: true,
+    } as never);
+
+    // status() should NOT have been called
+    expect(mockDriveClient.status).not.toHaveBeenCalled();
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Proton Drive Authentication");
+  });
+
+  it("returns success message when execCli auth login succeeds", async () => {
+    mockDriveClient.status.mockResolvedValue({
+      ok: false,
+      configured: true,
+      authenticated: false,
+      stagingExists: false,
+      cliPath: "/usr/bin/proton-drive",
+    });
+    mockDriveClient.execCli.mockResolvedValue({ stdout: "ok", stderr: "" });
+
+    const tool = capturedTools.get("proton_drive_auth_login")!;
+    const result = await (tool.handler)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Authentication command completed");
+    expect((result as any).structuredContent.loginCompleted).toBe(true);
+  });
+
+  it("returns error when status throws", async () => {
+    mockDriveClient.status.mockRejectedValue(new Error("bridge not responding"));
+
+    const tool = capturedTools.get("proton_drive_auth_login")!;
+    const result = await (tool.handler)({} as never);
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("bridge not responding");
   });
 });
