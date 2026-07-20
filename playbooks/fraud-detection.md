@@ -19,7 +19,7 @@ Objetivo: identificar correos de alto riesgo (phishing, spam, fraudes) y decidir
 ### 1. Ejecutar análisis de alertas
 
 ```bash
-npx -y @alexendros/protonmail-agent alert
+npx -y @alexendros/protonsuite-agent alert
 ```
 
 O, desde un cliente MCP, llamar `proton_agent_plan` con `goal: alert`.

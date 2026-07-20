@@ -18,7 +18,7 @@ Objetivo: instalar el agente, verificar que habla con Proton Mail Bridge y dejar
 ### 1. Instalar el paquete
 
 ```bash
-npx -y @alexendros/protonmail-agent setup
+npx -y @alexendros/protonsuite-agent setup
 ```
 
 ### 2. Configurar variables de entorno mínimas
@@ -35,7 +35,7 @@ export ALERT_MIN_SEVERITY=warning
 ### 3. Verificar conectividad
 
 ```bash
-npx -y @alexendros/protonmail-agent setup
+npx -y @alexendros/protonsuite-agent setup
 ```
 
 Salida esperada: Bridge reachable, IMAP OK, SMTP OK, lista de carpetas incluyendo INBOX.
@@ -43,7 +43,7 @@ Salida esperada: Bridge reachable, IMAP OK, SMTP OK, lista de carpetas incluyend
 ### 4. Generar plan de organización inicial
 
 ```bash
-npx -y @alexendros/protonmail-agent organize
+npx -y @alexendros/protonsuite-agent organize
 ```
 
 Revisa el plan en consola y en `logs/alerts-YYYY-MM-DD.jsonl`.
@@ -63,7 +63,7 @@ export ALERT_MIN_SEVERITY=warning
 
 ```bash
 export AGENT_DRY_RUN=false
-npx -y @alexendros/protonmail-agent organize
+npx -y @alexendros/protonsuite-agent organize
 ```
 
 ## Checklist final

@@ -33,13 +33,13 @@ Objetivo: clasificar los correos almacenados en INBOX y proponer/crear una estru
 
 ```bash
 # Plan en dry-run (default)
-npx -y @alexendros/protonmail-agent organize
+npx -y @alexendros/protonsuite-agent organize
 
 # Aplicar tras validación
-AGENT_DRY_RUN=false npx -y @alexendros/protonmail-agent organize
+AGENT_DRY_RUN=false npx -y @alexendros/protonsuite-agent organize
 
 # Limitar correos analizados (útil para buzones grandes)
-AGENT_MAX_INSPECT_EMAILS=500 npx -y @alexendros/protonmail-agent organize
+AGENT_MAX_INSPECT_EMAILS=500 npx -y @alexendros/protonsuite-agent organize
 ```
 
 ## Salida
