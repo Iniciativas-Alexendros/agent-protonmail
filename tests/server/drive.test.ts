@@ -466,6 +466,24 @@ describe("proton_drive_format_report", () => {
     expect((result as any).isError).toBe(true);
     expect((result as any).content[0].text).toContain("corrupt inventory");
   });
+
+  it("omite sección Obsolete files cuando obsoleteFiles vacío (línea 282 — falsy branch)", async () => {
+    mockAuditor.formatReport.mockReturnValue({
+      totalExtensions: 2,
+      extensions: [".md", ".txt"],
+      obsoleteExtensions: [],
+      obsoleteFiles: [], // empty → hits `length > 0 ? [...] : []` false branch
+      noExtension: 0,
+    });
+
+    const tool = capturedTools.get("proton_drive_format_report")!;
+    const result = await (tool.handler as (args: never) => unknown)({} as never);
+
+    const text = (result as any).content[0].text;
+    expect(text).toContain("## Extensions");
+    expect(text).not.toContain("## Obsolete files");
+    expect(text).toContain("**Obsolete files:** 0");
+  });
 });
 
 describe("proton_drive_list_files", () => {
