@@ -11,7 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cobertura de tests 98.00%** (+36.3pp desde 61.7%): 819 tests en 42 archivos. Rondas 6-8: bridge-client 88%→95%, config.ts 90%→100%, imap.ts 93%→95%, diagnostics 93%→100%, drive-audit 94%→100%, drive 94%→100%, http.ts 100% stmts 97% branches, smtp.ts 100%.
+### Changed
+
+### Fixed
+
+## [0.8.0] - 2026-07-20
+
+### Added
+
+- **Cobertura de tests 98.00%** (+36.3pp desde 61.7%): 889 tests en 43 archivos. Rondas 6-8: bridge-client 88%→95%, config.ts 90%→100%, imap.ts 93%→95%, diagnostics 93%→100%, drive-audit 94%→100%, drive 94%→100%, http.ts 100% stmts 97% branches, smtp.ts 100%.
 - **Tests para agent/organizer.ts** (17 tests): buildOrganizationPlan con mock ImapClient multi-categoría (legal, admin, tech, spam, phishing), applyOrganizationPlan con creación de carpetas, movimiento y copia.
 - **Tests para agent/executor.ts** (6 tests): mockear loadConfig, runSetup, buildOrganizationPlan. Probar cada goal con configs válidas e inválidas.
 - **Tests para agent/setup.ts** (8 tests): mockear execFile, execSync, writeFile. Probar setup con binarios instalados/no instalados, fallos de descarga y permisos.
@@ -21,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tests para server/agent.ts** (5 tests): tool proton_agent_plan con response_format JSON/Markdown, dryRun, goal=alert.
 - **Tests para server/utils.ts** (2 tests): helpers puros sin I/O.
 - **Tests para server/pass.ts** (15 tests): mockear PassClient, probar proton_pass_list/get/generate/health con éxito y error.
-- **Tests para server/drive.ts** (23 tests): mockear DriveClient, DriveAuditor, node:fs. Probar 12 tools MCP de Drive.
+- **Tests para server/drive.ts** (+11 tests): proton_drive_auth_status y proton_drive_auth_login tools MCP con mock DriveClient.
 - **Tests para ecosystem/discovery.ts** (40 tests): mockear execFileSync, whichSync, existsSync. Probar resolveBinPath, checkBinary, checkAllBinaries, discoverSubcommands, parseHelpOutput.
 - **Tests para ecosystem/installer.ts** (18 tests): mockear execFileSync. Probar installOnUbuntu (bridge/pass/drive/gpg), runApt, buildInstallPlan, platformPackage.
 - **Tests para ecosystem/updater.ts** (22 tests): mockear checkBinary, execFileSync. Probar checkUpdateFor (6 estados), fetchLatestVersion (7 ramas), getPackageManager (3 fallbacks).
@@ -37,65 +45,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tests para security.ts** (4 tests): validación de contraseñas, timing-safe comparison.
 - **Tests para drive-audit.ts**: auditoría de Drive con mock de fs y DriveClient.
 - **Tests para executor.ts** (6 tests): test unitarios del ejecutor de goals del agente.
-- **Branch gaps cerrados** (3 módulos): organizer.ts 72%→74% (getEmail null, suggestedLabels), mail.ts 87%→90% (non-empty flags, attachment sin content_type), drive.ts 85%→88% (dups/obsolete vacíos, existsSync=true).
+- **Branch gaps cerrados** (3 módulos): organizer.ts 72%→94% (+22pp), mail.ts 87%→89% (+2pp), drive.ts 85%→94% (+9pp).
+- **Branch Hunt 2** (3 módulos): server/drive.ts 94.89%, imap.ts 95.37%, organizer.ts 94.59% — 889 tests, gate 95.30% branches.
+- **Drive OAuth tools MCP**: proton_drive_auth_status (verifica instalación + autenticación) y proton_drive_auth_login (instrucciones interactivas para login).
 - **Split de src/config.ts** en sub-módulos por servicio: config/imap.ts, config/bridge.ts, config/smtp.ts, config/pass.ts, config/calendar.ts, config/drive.ts con barrel export en config/index.ts.
 - **CLI de agente expandido**: src/agent-cli.ts con --help, subcomandos (setup, organize, pass-audit, drive-audit, suite-status), exit codes.
 - **calendar-types.ts completado**: tipos CalDAV/iCalendar (RFC 5545) — VEvent, VCalendar, VTimezone, Alarm, Attachment, Attendee, Organizer.
 - **REPORTE_SEGURIDAD_FASE1.md movido** a docs/security/ para no exponer en raíz pública.
 - **Documentación de cobertura**: docs/coverage-report.md con reporte detallado de todos los módulos ordenados ascendente.
 - **TASKS.md**: documento integral con estado del proyecto, 6 fases completadas, 8 tareas priorizadas y guía para retomar.
-
-### Changed
-
-- **ESLint endurecimiento completo en src/** (14 reglas off→error): no-explicit-any, no-unsafe-* (4), no-unsafe-argument, no-non-null-assertion, no-deprecated, no-unnecessary-condition, no-unnecessary-type-conversion, no-unnecessary-type-assertion, no-useless-escape, require-await, no-floating-promises, no-misused-promises, no-base-to-string. 0 violaciones en src/.
-- **ESLint endurecimiento en tests/** (11 reglas off→warn): require-await (error), no-floating-promises, no-misused-promises, no-unnecessary-condition, no-unsafe-* (4), no-unsafe-argument, no-deprecated, restrict-template-expressions, no-non-null-assertion, no-unnecessary-type-assertion, no-useless-escape. 0 violaciones.
-- **ESLint reglas off→warn en src/**: restrict-template-expressions, restrict-plus-operands, prefer-nullish-coalescing. 0 violaciones.
-- **TypeScript strict flags activados**: noPropertyAccessFromIndexSignature, verbatimModuleSyntax, noImplicitOverride, exactOptionalPropertyTypes.
-- **Coverage badge migrado a gh-pages**: endpoint badge dinámico con shields.io, ya no commitea a main.
-- **Dockerfile**: imagen base migrada de node:26-alpine a node:22-alpine LTS.
-- **Dependabot endurecido**: labels por ecosistema (dependencies, npm/github-actions/docker), assignees (alexendros), timezone Europe/Madrid, versioning-strategy increase.
-- **Migración completa de npm a pnpm**: todos los workflows CI (ci.yml, quality.yml, release.yml, integration.yml) actualizados de `npm ci` a `pnpm install --frozen-lockfile` con `pnpm/action-setup`.
-- **Dockerfile actualizado**: multi-stage build con pnpm en builder stage (`RUN npm install -g pnpm`), COPY ajustados.
-- **pnpm-workspace.yaml**: añadido para estructura de workspace.
-- **package.json**: scripts actualizados para pnpm, añadido `pnpm.onlyBuiltDependencies` (esbuild, unrs-resolver).
-- **.gitignore**: package-lock.json añadido, coverage/ añadido.
-- **README.md**: badge de cobertura actualizado a 98.00%.
-- **server.json**: revisado y mantenido en raíz (template público sin secretos).
-- **Configuración de organizer**: manejo de errores mejorado en buildOrganizationPlan (finally cleanup, error catching por email).
-
-### Removed
-
-- **package.json lockfile npm**: package-lock.json eliminado (548KB). El proyecto usa exclusivamente pnpm-lock.yaml (86KB).
-
-### Fixed
-
-- **Test de phishing_link en rules.test.ts**: regex esperaba `\.proton\.` pero URL de test no tenía subdominio. Corregido `proton.xyz` → `login.proton.xyz`.
-- **Test de organizer**: error propagado por finally block corregido a expect rejection.
-- **Test de drive**: mock isDirectory cambiado de `includes('/sub')` a `endsWith('/sub')` para evitar falsos positivos con archivos dentro del subdirectorio. HOME save/restore con origHome pattern.
-- **Módulo ecosystem** (`src/ecosystem/`): descubrimiento de binarios, instalación y actualización de herramientas del ecosistema Proton.
-- **Cliente Drive real**: migración de rclone a CLI oficial de Proton Drive (`proton-drive`). Tools MCP: `proton_drive_audit`, `proton_drive_status`, `proton_drive_organize`, `proton_drive_format_report`, `proton_drive_sync`.
-- **Bridge MCP tools**: integración con Proton Bridge para diagnóstico y gestión.
-- **Goal `suite-status`**: reporte del estado completo del ecosistema Proton Suite.
+- **Coverage gate 95%**: vitest config con thresholds globales de líneas, branches y statements al 95% para prevenir regresiones.
 - **Sistema de alertas multi-sink** (`src/alerts/ntfy.ts`). Arquitectura `AlertSink[]` con soporte para Ntfy. `audit()` solo escribe al file sink.
-- **Stubs de Calendar con mensaje preciso**: ahora indican "E2E-encrypted sync, not standard CalDAV".
 - **Tests unitarios de PassClient** (`tests/pass.test.ts`) con dependency injection.
 - **Tests de registro de tools** (`tests/server/tools-registry.test.ts`).
 - **Tests E2E de Drive** (`tests/e2e/drive.e2e.ts`).
-- **Cobertura en CI** (`npm run coverage`) con badge en README.
 - **Workflow `integration.yml`**: tests de integración para Bridge, Drive y Suite.
 - **Documentación de Drive**: `docs/drive-audit.md`, `docs/superpowers/plans/2026-07-10-proton-drive-rsync-audit.md`.
 - **Plan de sprint** (`docs/superpowers/plans/2026-07-17-sprint-bugfixes-pendientes.md`).
 
 ### Changed
 
+- **ESLint endurecimiento completo en src/** (14 reglas off→error): no-explicit-any, no-unsafe-* (4), no-unsafe-argument, no-non-null-assertion, no-deprecated, no-unnecessary-condition, no-unnecessary-type-conversion, no-unnecessary-type-assertion, no-useless-escape, require-await, no-floating-promises, no-misused-promises, no-base-to-string. 0 violaciones.
+- **ESLint endurecimiento en tests/** (11 reglas off→warn): require-await (error), no-floating-promises, no-misused-promises, no-unnecessary-condition, no-unsafe-* (4), no-unsafe-argument, no-deprecated, restrict-template-expressions, no-non-null-assertion, no-unnecessary-type-assertion, no-useless-escape. 0 violaciones.
+- **ESLint reglas off→warn en src/**: restrict-template-expressions, restrict-plus-operands, prefer-nullish-coalescing. 0 violaciones.
+- **TypeScript strict flags activados**: noUncheckedIndexedAccess, noPropertyAccessFromIndexSignature, verbatimModuleSyntax, noImplicitOverride, exactOptionalPropertyTypes.
+- **Coverage badge migrado a gh-pages**: endpoint badge dinámico con shields.io, ya no commitea a main.
+- **Dockerfile**: imagen base migrada de node:26-alpine a node:22-alpine LTS.
+- **Dependabot endurecido**: labels por ecosistema (dependencies, npm/github-actions/docker), assignees (alexendros), timezone Europe/Madrid, versioning-strategy increase.
+- **Migración completa de npm a pnpm**: todos los workflows CI (ci.yml, quality.yml, release.yml, integration.yml) actualizados de `npm ci` a `pnpm install --frozen-lockfile` con `pnpm/action-setup`.
+- **Dockerfile actualizado**: multi-stage build con pnpm en builder stage (`RUN npm install -g pnpm`), COPY ajustados.
 - **Hash de duplicados en PassClient**: de djb2 a SHA-256 (primeros 16 hex chars).
 - **`list()` de PassClient** ahora lee el filesystem directamente (`fs.readdir` recursivo).
 - **`validatePath()`** rechaza secuencias `..` para prevenir directory traversal.
 - **`insert()` y `generate()` de PassClient** usan `--force`.
 - **`suite-status`** reporta Drive como respaldado por CLI oficial, no como stub.
 - **CI apunta a runner self-hosted** en minipc.
-- **Documentación**: README actualizado con métricas del ecosistema completo.
 - **Dockerfile.bridge**: digest SHA256 actualizado.
+- **pnpm-workspace.yaml**: añadido para estructura de workspace.
+- **package.json**: scripts actualizados para pnpm, añadido `pnpm.onlyBuiltDependencies` (esbuild, unrs-resolver).
+- **.gitignore**: package-lock.json añadido, coverage/ añadido.
+- **server.json**: revisado y mantenido en raíz (template público sin secretos).
+- **Configuración de organizer**: manejo de errores mejorado en buildOrganizationPlan (finally cleanup, error catching por email).
+
+### Removed
+
+- **package.json lockfile npm**: package-lock.json eliminado (548KB). El proyecto usa exclusivamente pnpm-lock.yaml (86KB).
 
 ### Fixed
 
@@ -109,6 +103,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **zizmor**: peaceiris/actions-gh-pages commit hash actualizado a v4.1.0 para fijar versión.
 - **http.ts**: cerrado último gap de branches (ipKeyGenerator anon fallback) — 100% stmts, 97.22% branches.
 - **Dependabot**: prevención de agrupación de major bumps.
+- **Test de phishing_link en rules.test.ts**: regex esperaba `\.proton\.` pero URL de test no tenía subdominio. Corregido `proton.xyz` → `login.proton.xyz`.
+- **Test de organizer**: error propagado por finally block corregido a expect rejection.
+- **Test de drive**: mock isDirectory cambiado de `includes('/sub')` a `endsWith('/sub')` para evitar falsos positivos con archivos dentro del subdirectorio. HOME save/restore con origHome pattern.
+- **Stubs de Calendar con mensaje preciso**: ahora indican "E2E-encrypted sync, not standard CalDAV".
+- **Cobertura en CI** (`npm run coverage`) con badge en README.
 
 ## [0.7.0] - 2026-07-17
 
@@ -147,12 +146,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **Nombre anterior** `@alexendros/protonmail-mcp` queda como alias histórico; el paquete se publica a partir de ahora como `@alexendros/protonmail-agent`.
-
-## [0.4.0] - 2026-06-20
-
-### Fixed
-
-- **Version single-source.** The server version was hardcoded in three places that had drifted (`package.json` 0.3.1, `src/server.ts` "0.3.0", `src/http.ts` `/healthz` "0.2.0"). It is now derived once from `package.json` at runtime via `src/version.ts`.
 
 ## [0.4.0] - 2026-06-20
 
@@ -243,12 +236,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@alexendros/protonmail-mcp` (old npm name) deprecated with `npm deprecate` pointing to the new package.
 
-[Unreleased]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/releases/tag/v0.8.0
+[0.7.0]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/releases/tag/v0.7.0
+[0.5.0]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/releases/tag/v0.5.0
 [0.4.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.4.0
 [0.2.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.2.0
 [0.1.2]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Iniciativas-Alexendros/protonmailbrige-mcptool/releases/tag/v0.1.0
-
-[0.7.0]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/releases/tag/v0.7.0
-[0.5.0]: https://github.com/Iniciativas-Alexendros/agent-protonsuite/releases/tag/v0.5.0

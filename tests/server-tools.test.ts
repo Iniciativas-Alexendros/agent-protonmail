@@ -182,7 +182,7 @@ const silentLog = {
 }
 
 async function makeClient() {
-  const { server } = buildServer(cfg, silentLog as never)
+  const { server } = buildServer(cfg, silentLog)
   const client = new Client({ name: 'test', version: '1.0.0' })
   const [clientT, serverT] = InMemoryTransport.createLinkedPair()
   await Promise.all([server.connect(serverT), client.connect(clientT)])
@@ -190,7 +190,7 @@ async function makeClient() {
 }
 
 function firstText(res: { content: unknown }): string {
-  return (res.content as { text: string }[])[0]!.text
+  return (res.content as { text: string }[])[0].text
 }
 
 /** Asserts the SDK returned a Zod input-validation error (isError + -32602 text). */
@@ -347,7 +347,7 @@ describe('proton_list_emails', () => {
       items: { uid: number }[]
     }
     expect(sc.total).toBe(10)
-    expect(sc.items[0]!.uid).toBe(42)
+    expect(sc.items[0].uid).toBe(42)
   })
 
   it('rejects limit above max (100)', async () => {
@@ -372,7 +372,7 @@ describe('proton_search_emails', () => {
       items: { uid: number }[]
     }
     expect(sc.matched).toBe(1)
-    expect(sc.items[0]!.uid).toBe(42)
+    expect(sc.items[0].uid).toBe(42)
   })
 
   it('rejects unknown field in fields enum', async () => {
@@ -655,19 +655,19 @@ describe('drive tools (registered)', () => {
     },
   }
 
-  it('registers the 12 drive tools', async () => {
-    const { server } = buildServer(driveCfg, silentLog as never)
+  it('registers the 14 drive tools', async () => {
+    const { server } = buildServer(driveCfg, silentLog)
     const client = new Client({ name: 'test', version: '1.0.0' })
     const [clientT, serverT] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverT), client.connect(clientT)])
     const { tools } = await client.listTools()
     const driveTools = tools.filter((t) => t.name.startsWith('proton_drive_'))
-    expect(driveTools).toHaveLength(12)
+    expect(driveTools).toHaveLength(14)
     await client.close()
   })
 
   it('proton_drive_status returns structured content without throwing', async () => {
-    const { server } = buildServer(driveCfg, silentLog as never)
+    const { server } = buildServer(driveCfg, silentLog)
     const client = new Client({ name: 'test', version: '1.0.0' })
     const [clientT, serverT] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverT), client.connect(clientT)])
@@ -698,7 +698,7 @@ describe('drive tools (registered)', () => {
   })
 
   async function makeDriveClient() {
-    const { server } = buildServer(driveCfg, silentLog as never)
+    const { server } = buildServer(driveCfg, silentLog)
     const client = new Client({ name: 'test', version: '1.0.0' })
     const [clientT, serverT] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverT), client.connect(clientT)])

@@ -139,7 +139,7 @@ const silentLog = {
 }
 
 function makeClient(): ImapClient {
-  return new ImapClient(bridgeCfg, silentLog as never)
+  return new ImapClient(bridgeCfg, silentLog)
 }
 
 // Un mensaje "summary" tal como lo emite el fetch de imapflow.
@@ -342,6 +342,25 @@ describe('ImapClient · differentiated connection errors', () => {
     expect(err.message).toMatch(/timeout/i)
     expect(err.message).toMatch(/firewall/i)
   })
+
+  it('maps an unknown error to the generic fallback hint (else branch)', async () => {
+    const err = await failWith('UNKNOWN_ERROR_XYZ')
+    expect(err.message).toMatch(/Fallo conectando/)
+    expect(err.message).toMatch(/127\.0\.0\.1:1143/)
+    expect(err.message).toMatch(/UNKNOWN_ERROR_XYZ/)
+  })
+
+  it('cubre msg || error desconocido en el else genérico cuando msg es vacío', async () => {
+    vi.useFakeTimers()
+    imapState.connectFailUntil = 99
+    imapState.connectErrorMessage = ''  // mensaje vacío → msg = ''
+    const c = makeClient()
+    const p = c.listMailboxes().catch((e: Error) => e)
+    await vi.advanceTimersByTimeAsync(5000)
+    const err = await p
+    expect(err.message).toMatch(/error desconocido/)
+    expect(err.message).toMatch(/Fallo conectando/)
+  })
 })
 
 // -----------------------------------------------------------------------------
@@ -480,7 +499,7 @@ describe('ImapClient · listEmails', () => {
     expect(res.total).toBe(10)
     // Orden descendente por seq.
     expect(res.items.map((i) => i.seq)).toEqual([3, 2, 1])
-    expect(res.items[0]!.from).toBe('Alice <alice@example.com>')
+    expect(res.items[0].from).toBe('Alice <alice@example.com>')
     expect(imapState.lockReleases).toBe(1) // lock liberado
   })
 
@@ -787,10 +806,10 @@ describe('ImapClient · envelope/address parsing edge cases', () => {
     ]
     const c = makeClient()
     const res = await c.listEmails('INBOX', 25, 0)
-    expect(res.items[0]!.from).toBe('Bob <bob@example.com>')
-    expect(res.items[0]!.to).toEqual(['x@y.com'])
+    expect(res.items[0].from).toBe('Bob <bob@example.com>')
+    expect(res.items[0].to).toEqual(['x@y.com'])
     // date string pasa tal cual (no es Date).
-    expect(res.items[0]!.date).toBe('2026-02-02T00:00:00Z')
+    expect(res.items[0].date).toBe('2026-02-02T00:00:00Z')
   })
 
   it('yields undefined from / empty to for empty or unusable address lists', async () => {
@@ -808,7 +827,7 @@ describe('ImapClient · envelope/address parsing edge cases', () => {
     ]
     const c = makeClient()
     const res = await c.listEmails('INBOX', 25, 0)
-    const item = res.items[0]!
+    const item = res.items[0]
     expect(item.from).toBeUndefined()
     expect(item.to).toEqual([])
     expect(item.flags).toEqual([])
@@ -819,8 +838,8 @@ describe('ImapClient · envelope/address parsing edge cases', () => {
     imapState.fetchResults = [{ uid: 5, seq: 1, flags: new Set(), size: 0 }]
     const c = makeClient()
     const res = await c.listEmails('INBOX', 25, 0)
-    expect(res.items[0]!.uid).toBe(5)
-    expect(res.items[0]!.from).toBeUndefined()
-    expect(res.items[0]!.to).toEqual([])
+    expect(res.items[0].uid).toBe(5)
+    expect(res.items[0].from).toBeUndefined()
+    expect(res.items[0].to).toEqual([])
   })
 })

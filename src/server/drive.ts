@@ -614,4 +614,153 @@ export function registerDriveTools(
       return { content: [{ type: 'text', text: `Removed: ${remote_path}` }] }
     },
   )
+
+  server.registerTool(
+    'proton_drive_auth_status',
+    {
+      title: 'Proton Drive authentication status',
+      description:
+        'Checks whether the proton-drive CLI is installed and authenticated. Use this before any Drive operation that requires auth.',
+      inputSchema: {
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('Output format.'),
+      },
+      annotations: {
+        readOnlyHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ response_format }) => {
+      try {
+        const deps = driveClient.checkDeps()
+        const st = await driveClient.status()
+        const authStatus = {
+          cliInstalled: deps.ok,
+          cliVersion: deps.version ?? null,
+          cliError: deps.error ?? null,
+          authenticated: st.authenticated ?? false,
+          stagingExists: st.stagingExists,
+          cliPath: st.cliPath,
+        }
+        if (response_format === 'json') {
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify(authStatus, null, 2) },
+            ],
+            structuredContent: authStatus as unknown as Record<
+              string,
+              unknown
+            >,
+          }
+        }
+        const lines = [
+          '# Proton Drive Auth Status',
+          `- **CLI installed:** ${deps.ok ? 'yes' : 'no'}`,
+          deps.version
+            ? `- **CLI version:** ${deps.version}`
+            : null,
+          deps.error
+            ? `- **CLI error:** ${deps.error}`
+            : null,
+          `- **Authenticated:** ${authStatus.authenticated ? 'yes' : 'no'}`,
+          `- **Staging exists:** ${st.stagingExists ? 'yes' : 'no'}`,
+        ].filter((x) => x !== null)
+        return {
+          content: [{ type: 'text', text: lines.join('\n') }],
+          structuredContent: authStatus as unknown as Record<
+            string,
+            unknown
+          >,
+        }
+      } catch (err) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: String(err) }],
+        }
+      }
+    },
+  )
+
+  server.registerTool(
+    'proton_drive_auth_login',
+    {
+      title: 'Authenticate with Proton Drive',
+      description:
+        'Attempts to authenticate with the proton-drive CLI. Since the CLI requires interactive credentials (username, password, 2FA), the tool returns a command the user must run in their terminal. Check auth status with proton_drive_auth_status after running the command.',
+      inputSchema: {
+        force: z
+          .boolean()
+          .default(false)
+          .describe(
+            'If true, skips the already-authenticated check and returns login instructions.',
+          ),
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ force }) => {
+      try {
+        if (!force) {
+          const st = await driveClient.status()
+          if (st.authenticated) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    'Already authenticated with Proton Drive. Use `force: true` to re-authenticate or run `proton-drive auth logout` first.',
+                },
+              ],
+              structuredContent: {
+                alreadyAuthenticated: true,
+                authenticatedUser: null,
+              },
+            }
+          }
+        }
+        // Attempt non-interactive login — this will likely fail on most systems
+        // since the CLI prompts for credentials interactively.
+        try {
+          await driveClient.execCli(['auth', 'login'])
+          return {
+            content: [
+              {
+                type: 'text',
+                text:
+                  'Authentication command completed. Use `proton_drive_auth_status` to verify.',
+              },
+            ],
+            structuredContent: { loginCompleted: true },
+          }
+        } catch {
+          /* Interactive prompt — return instructions */
+        }
+        const cmd = `${driveClient.opts.cliBin} auth login`
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `# Proton Drive Authentication\n\nThe CLI requires interactive login.\n\n1. Open a **terminal** on your machine\n2. Run:\n\n   \`\`\`bash\n   ${cmd}\n   \`\`\`\n\n3. Enter your Proton credentials and any 2FA code when prompted\n4. After successful login, run:\n\n   \`proton_drive_auth_status\`\n\n   to confirm authentication.`,
+            },
+          ],
+          structuredContent: {
+            requiresInteractiveLogin: true,
+            command: cmd,
+          },
+        }
+      } catch (err) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: String(err) }],
+        }
+      }
+    },
+  )
 }
