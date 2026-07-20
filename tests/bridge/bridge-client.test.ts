@@ -634,3 +634,59 @@ describe('R4 — info: regex parcial (solo algunos campos)', () => {
     expect(info.smtpPort).toBeUndefined()
   })
 })
+
+describe('R5 — login: cliInteractive prompt Username handler', () => {
+  it('envía user cuando recibe prompt Username', async () => {
+    execFileImpl = () => {
+      const child = makeDefaultChild()
+      const stdout = child.stdout as EventEmitter
+      setTimeout(() => stdout.emit('data', '>>> '), 0)
+      setTimeout(() => stdout.emit('data', 'Username: '), 10)
+      setTimeout(() => stdout.emit('data', 'Password: '), 20)
+      setTimeout(() => stdout.emit('data', 'logged in successfully\n'), 30)
+      setTimeout(() => child.emit('close', 0), 40)
+      return child
+    }
+    const client = new BridgeClient(BIN, silentLog)
+    const result = await client.login('u@test.com', 'secret')
+    expect(result.ok).toBe(true)
+  })
+})
+
+describe('R5 — login: cliInteractive prompt 2FA handler with TOTP', () => {
+  it('envía TOTP cuando recibe prompt TOTP', async () => {
+    execFileImpl = () => {
+      const child = makeDefaultChild()
+      const stdout = child.stdout as EventEmitter
+      setTimeout(() => stdout.emit('data', '>>> '), 0)
+      setTimeout(() => stdout.emit('data', 'Username: '), 10)
+      setTimeout(() => stdout.emit('data', 'Password: '), 20)
+      setTimeout(() => stdout.emit('data', 'TOTP: '), 30)
+      setTimeout(() => stdout.emit('data', '2FA code required'), 40)
+      setTimeout(() => child.emit('close', 0), 50)
+      return child
+    }
+    const client = new BridgeClient(BIN, silentLog)
+    const result = await client.login('u@test.com', 'secret', '123456')
+    expect(result.ok).toBe(false)
+    expect(result.needs2FA).toBe(true)
+  })
+})
+
+describe('R5 — shutdown: stdin.write error catch', () => {
+  it('no lanza cuando stdin.write falla', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    processKillImpl = () => true
+    execFileImpl = () => {
+      const child = makeChildThatStaysOpen()
+      child.stdin!.write = vi.fn(() => { throw new Error('EPIPE') })
+      return child
+    }
+    const client = new BridgeClient(BIN, silentLog)
+    await client.spawn()
+    const promise = client.shutdown()
+    vi.advanceTimersByTime(6_000)
+    await expect(promise).resolves.toBeUndefined()
+    vi.useRealTimers()
+  })
+})

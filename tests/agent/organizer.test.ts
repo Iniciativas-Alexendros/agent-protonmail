@@ -261,6 +261,26 @@ describe('buildOrganizationPlan', () => {
     expect(hoisted.mockClose).toHaveBeenCalled()
   })
 
+  it('salta emails cuyo getEmail devuelve null', async () => {
+    hoisted.mockListMailboxes.mockResolvedValue([{ path: 'INBOX' }])
+    hoisted.mockListEmails.mockResolvedValue({
+      items: [makeSummary(1), makeSummary(2)],
+      total: 2,
+    })
+    hoisted.mockGetEmail
+      .mockResolvedValueOnce(null)  // getEmail returns null → skip
+      .mockResolvedValueOnce(makeFullEmail(2))
+    hoisted.mockClassifyEmail.mockReturnValue({ category: 'comercial', confidence: 0.8, severity: 'info', reason: 'newsletter', suggestedFolder: 'Archive', suggestedLabels: [] })
+    hoisted.mockDetectThreats.mockReturnValue([])
+    hoisted.mockInferStateLabels.mockReturnValue({ labels: [], reason: 'sin etiqueta' })
+
+    const plan = await buildOrganizationPlan(defaultCfg, defaultCtx, hoisted.silentLog, hoisted.mockAlertSystem)
+
+    // Only uid=2 should be classified (uid=1 was skipped because getEmail returned null)
+    expect(plan.folderProposals).toHaveLength(1)
+    expect(plan.folderProposals[0].emails).toEqual([2])
+  })
+
   it('cierra ImapClient en finally incluso cuando listMailboxes lanza', async () => {
     hoisted.mockListMailboxes.mockRejectedValue(new Error('list failed'))
 
@@ -395,9 +415,118 @@ describe('applyOrganizationPlan', () => {
     await expect(applyOrganizationPlan(defaultCfg, samplePlan, hoisted.silentLog)).resolves.toBeUndefined()
   })
 
+  it('aplica suggestedLabels en las carpetas destino', async () => {
+    const plan: OrganizationPlan = {
+      newFolders: [],
+      folderProposals: [
+        { path: 'Folders/Pagos', reason: 'facturas', emails: [1], suggestedLabels: ['Labels/Pendiente'] },
+      ],
+      labelProposals: [],
+      alerts: [],
+    }
+    hoisted.mockCreateMailbox.mockResolvedValue({ path: 'Folders/Pagos', created: false })
+    hoisted.mockListEmails.mockResolvedValue({ items: [makeSummary(1)], total: 1 })
+
+    await applyOrganizationPlan(defaultCfg, plan, hoisted.silentLog)
+
+    // suggestedLabels path: list moved items, then copy to label
+    expect(hoisted.mockListEmails).toHaveBeenCalledWith('Folders/Pagos', 1, 0)
+    expect(hoisted.mockCopyEmail).toHaveBeenCalledWith('Folders/Pagos', 1, 'Labels/Pendiente')
+  })
+
   it('cierra ImapClient en finally', async () => {
     await applyOrganizationPlan(defaultCfg, samplePlan, hoisted.silentLog)
 
     expect(hoisted.mockClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ===========================================================================
+// branch gap coverage — lift branches en src/agent/organizer.ts líneas 96, 106-107, 157
+// ===========================================================================
+
+describe('buildOrganizationPlan — branch gap coverage', () => {
+  it('deduplica labelProposals cuando 2+ emails infieren la misma etiqueta (línea 96)', async () => {
+    hoisted.mockListMailboxes.mockResolvedValue([{ path: 'INBOX' }])
+    hoisted.mockListEmails.mockResolvedValue({
+      items: [makeSummary(1), makeSummary(2), makeSummary(3)],
+      total: 3,
+    })
+    hoisted.mockGetEmail
+      .mockResolvedValueOnce(makeFullEmail(1))
+      .mockResolvedValueOnce(makeFullEmail(2))
+      .mockResolvedValueOnce(makeFullEmail(3))
+    hoisted.mockClassifyEmail.mockReturnValue({ category: 'comercial', confidence: 0.8, severity: 'info', reason: 'newsletter', suggestedFolder: 'Folders/Comercial', suggestedLabels: [] })
+    hoisted.mockDetectThreats.mockReturnValue([])
+    // Emails 1, 2, 3 infieren la MISMA label → existing.emails.push se llama 2 veces
+    hoisted.mockInferStateLabels.mockReturnValue({ labels: ['Labels/Por revisar'], reason: 'requiere acción' })
+
+    const plan = await buildOrganizationPlan(defaultCfg, defaultCtx, hoisted.silentLog, hoisted.mockAlertSystem)
+
+    // 1 sola labelProposal con todos los uids
+    expect(plan.labelProposals).toHaveLength(1)
+    expect(plan.labelProposals[0].name).toBe('Labels/Por revisar')
+    expect(plan.labelProposals[0].emails).toEqual([1, 2, 3])
+  })
+
+  it('maneja errores de inferStateLabels sin romper el plan (líneas 106-107)', async () => {
+    hoisted.mockListMailboxes.mockResolvedValue([{ path: 'INBOX' }])
+    hoisted.mockListEmails.mockResolvedValue({
+      items: [makeSummary(1)],
+      total: 1,
+    })
+    hoisted.mockGetEmail.mockResolvedValueOnce(makeFullEmail(1))
+    hoisted.mockClassifyEmail.mockReturnValue({ category: 'comercial', confidence: 0.8, severity: 'info', reason: 'newsletter', suggestedFolder: 'Folders/Comercial', suggestedLabels: [] })
+    hoisted.mockDetectThreats.mockReturnValue([])
+    // inferStateLabels throws → entra en el catch block
+    hoisted.mockInferStateLabels.mockImplementation(() => {
+      throw new Error('state inference failed')
+    })
+
+    const plan = await buildOrganizationPlan(defaultCfg, defaultCtx, hoisted.silentLog, hoisted.mockAlertSystem)
+
+    // Plan sigue adelante con la propuesta de carpeta, pero sin labelProposals por el fallo
+    expect(plan.folderProposals).toHaveLength(1)
+    expect(plan.labelProposals).toEqual([])
+    // Error loggeado
+    expect(hoisted.silentLog.error).toHaveBeenCalledWith(
+      'Error inferring state labels',
+      expect.objectContaining({ uid: 1, error: expect.stringContaining('state inference failed') }),
+    )
+  })
+
+  it('clasifica email sin from/subject/textBody/htmlBody — spread ternarios al false branch', async () => {
+    hoisted.mockListMailboxes.mockResolvedValue([{ path: 'INBOX' }])
+    hoisted.mockListEmails.mockResolvedValue({
+      items: [makeSummary(1)],
+      total: 1,
+    })
+    // Email con todos los campos opcionales undefined
+    hoisted.mockGetEmail.mockResolvedValueOnce(makeFullEmail(1, { from: undefined, subject: undefined, textBody: undefined, htmlBody: undefined }))
+    hoisted.mockClassifyEmail.mockReturnValue({ category: 'uncategorized', confidence: 0.5, severity: 'info', reason: 'empty', suggestedFolder: 'Archive', suggestedLabels: [] })
+    hoisted.mockDetectThreats.mockReturnValue([])
+    hoisted.mockInferStateLabels.mockReturnValue({ labels: [], reason: 'sin etiqueta' })
+
+    await buildOrganizationPlan(defaultCfg, defaultCtx, hoisted.silentLog, hoisted.mockAlertSystem)
+
+    // Spread ternarios caen al branch false → classifyEmail/detectThreats reciben {}
+    expect(hoisted.mockClassifyEmail).toHaveBeenCalledWith({})
+    expect(hoisted.mockDetectThreats).toHaveBeenCalledWith({})
+  })
+})
+
+describe('applyOrganizationPlan — branch gap coverage', () => {
+  it('re-lanza error de createMailbox que no es "already subscribed" (línea 157)', async () => {
+    const plan: OrganizationPlan = {
+      newFolders: ['Folders/NewFolder'],
+      folderProposals: [],
+      labelProposals: [],
+      alerts: [],
+    }
+    // Throw sin "already subscribed" → entra al throw err
+    hoisted.mockCreateMailbox.mockRejectedValueOnce(new Error('Permission denied: cannot create folder'))
+
+    await expect(applyOrganizationPlan(defaultCfg, plan, hoisted.silentLog)).rejects.toThrow('Permission denied')
+    expect(hoisted.mockCreateMailbox).toHaveBeenCalledTimes(1)
   })
 })

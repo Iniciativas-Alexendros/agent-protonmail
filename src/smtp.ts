@@ -90,7 +90,7 @@ export class SmtpClient {
         content: Buffer.from(a.contentBase64, 'base64'),
         contentType: a.contentType,
       })),
-    })
+    }) as unknown as SendResult
     this.log.info('Email sent', {
       messageId: info.messageId,
       accepted: info.accepted,
@@ -98,8 +98,8 @@ export class SmtpClient {
     })
     return {
       messageId: info.messageId,
-      accepted: (info.accepted ?? []) as string[],
-      rejected: (info.rejected ?? []) as string[],
+      accepted: info.accepted,
+      rejected: info.rejected,
       response: info.response,
     }
   }
@@ -222,7 +222,7 @@ export function prefixSubject(
  */
 export function collectReferences(original: EmailFull): string[] {
    
-  const refsHeader = original.headers.references ?? ''
+  const refsHeader = original.headers['references'] ?? ''
   const existing: string[] = refsHeader.match(/<[^>]+>/g) ?? []
   if (original.messageId) existing.push(original.messageId)
   return existing

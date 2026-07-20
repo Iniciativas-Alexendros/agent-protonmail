@@ -407,7 +407,7 @@ describe("resolveBridgeConfig", () => {
       PROTON_BRIDGE_USER: "a@b.com",
       PROTON_BRIDGE_PASS: "x",
       PROTON_MAIL_FROM: "a@b.com",
-      PASS_ENABLED: "true",
+      PROTON_PASS_ENABLED: "true",
       PROTON_BRIDGE_PASS_PATH: "proton/bridge/secret",
     });
     const resolved = await resolveBridgeConfig(cfg, log);

@@ -2,18 +2,20 @@
 # ---------------------------------------------------------------------------
 # update-coverage-badge.sh
 #
-# Actualiza el badge shields.io de cobertura en README.md con el % real.
+# Genera coverage-badge.json para shields.io endpoint badge (gh-pages).
+# También actualiza el texto de cobertura en la sección de calidad del README.
 #
 # Uso:
-#   bash scripts/update-coverage-badge.sh              # corre vitest + actualiza
+#   bash scripts/update-coverage-badge.sh              # corre vitest + genera
 #   bash scripts/update-coverage-badge.sh --skip-run    # solo procesa JSON existente
-#   bash scripts/update-coverage-badge.sh --check       # verifica sin modificar
+#   bash scripts/update-coverage-badge.sh --check       # verifica badge JSON sin modificar
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
 COVERAGE_FILE="coverage/coverage-summary.json"
+BADGE_FILE="coverage/coverage-badge.json"
 README="README.md"
-mode="${1#--}"  # normalize: --check → check, --skip-run → skip-run
+mode="${1#--}"
 MODE="${mode:-update}"
 
 # ── 1. Ejecutar vitest solo si es necesario ──────────────────────────────
@@ -37,7 +39,6 @@ console.log(r.total.statements.pct.toFixed(2));
 echo "→ Coverage: $PCT% statements"
 
 # ── 3. Elegir color según rango ──────────────────────────────────────────
-# Color por rango — usa comparación entera (sin bc)
 PCT_INT="${PCT%.*}"
 if (( PCT_INT >= 90 )); then
   COLOR="brightgreen"
@@ -49,39 +50,40 @@ else
   COLOR="red"
 fi
 
-NEW_BADGE="[![Coverage](https://img.shields.io/badge/coverage-${PCT}%25-${COLOR}?logo=vitest&logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)"
+# ── 4. Generar coverage-badge.json para shields.io endpoint ─────────────
+mkdir -p coverage
+cat > "$BADGE_FILE" <<EOF
+{
+  "schemaVersion": 1,
+  "label": "coverage",
+  "message": "${PCT}%",
+  "color": "${COLOR}",
+  "logo": "vitest",
+  "logoColor": "white"
+}
+EOF
+echo "✅ $BADGE_FILE generated: ${PCT}% (${COLOR})"
 
-# ── 4. Modo check ────────────────────────────────────────────────────────
-CURRENT_PCT=$(grep -oP '(?<=coverage-)[\d.]+(?=%25-)' "$README" | head -1 || echo "")
+# ── 5. Modo check — verificar que badge JSON coincide con cobertura ──────
 if [[ "$MODE" == "check" ]]; then
-  if [[ "$CURRENT_PCT" != "$PCT" ]]; then
-    echo "❌ Badge out of date: README has ${CURRENT_PCT:-???}%, actual is $PCT%"
+  if [[ ! -f "$BADGE_FILE" ]]; then
+    echo "❌ $BADGE_FILE not found"
     exit 1
   fi
-  echo "✅ Badge is up to date ($PCT%)"
+  CURRENT_PCT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('${BADGE_FILE}','utf-8')).message)")
+  if [[ "${CURRENT_PCT}" != "${PCT}%" ]]; then
+    echo "❌ Badge out of date: JSON has ${CURRENT_PCT}, actual is ${PCT}%"
+    exit 1
+  fi
+  echo "✅ Badge JSON is up to date ($PCT%)"
   exit 0
 fi
 
-# ── 5. Reemplazar badge ──────────────────────────────────────────────────
-# Buscar línea que contiene el badge y reemplazarla completamente.
-# Usamos '|' como delimiter de sed para evitar colisiones con '/' de las URLs.
-BADGE_MARKER='img.shields.io/badge/coverage-'
-if grep -q "$BADGE_MARKER" "$README"; then
-  # Escapar & en la URL del badge para que sed no lo interprete como backreference.
-# Si no se escapa, c\/a\&logoColor=white → c\/a$&logoColor (el & duplica el match).
-ESCAPED=$(echo "${NEW_BADGE}" | sed 's|&|\\&|g')
-sed -i "s|^.*${BADGE_MARKER}.*$|${ESCAPED}|" "$README"
-  echo "✅ README.md badge updated to $PCT% ($COLOR)"
-else
-  echo "❌ No coverage badge found in $README"
-  exit 1
-fi
-
-# ── 6. Actualizar texto en sección de calidad ────────────────────────────
+# ── 6. Actualizar texto en sección de calidad del README ─────────────────
 QUALITY_TEXT_PATTERN='npm run coverage'
 QUALITY_LINE=$(grep -n "$QUALITY_TEXT_PATTERN" "$README" | head -1 || true)
 if [[ -n "$QUALITY_LINE" ]]; then
   LINE_NUM=$(echo "$QUALITY_LINE" | cut -d: -f1)
-  sed -i "${LINE_NUM}s|[0-9.]\+% statements|${PCT}% statements|" "$README"
-  echo "✅ Quality section coverage text updated"
+  sed -i "${LINE_NUM}s|[0-9.]\\+% statements|${PCT}% statements|" "$README"
+  echo "✅ Quality section coverage text updated to $PCT%"
 fi

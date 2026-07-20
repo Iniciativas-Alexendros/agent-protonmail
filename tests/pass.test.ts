@@ -197,7 +197,7 @@ describe('PassClient', () => {
       expect(result.path).toBe('old/entry')
     })
 
-    it('llama execFile con rm -f', async () => {
+    it('llama execFile con rm -f', () => {
       makeClient().remove('old/entry').catch(() => {})
       expect(hoisted.mockExecFile).toHaveBeenCalledWith('pass', ['rm', '-f', 'old/entry'], expect.any(Object))
     })
@@ -214,7 +214,7 @@ describe('PassClient', () => {
       expect(result.to).toBe('new/path')
     })
 
-    it('llama execFile con mv', async () => {
+    it('llama execFile con mv', () => {
       makeClient().move('a', 'b').catch(() => {})
       expect(hoisted.mockExecFile).toHaveBeenCalledWith('pass', ['mv', 'a', 'b'], expect.any(Object))
     })
@@ -231,7 +231,7 @@ describe('PassClient', () => {
       expect(result.dst).toBe('dst/entry')
     })
 
-    it('llama execFile con cp', async () => {
+    it('llama execFile con cp', () => {
       makeClient().copy('s', 'd').catch(() => {})
       expect(hoisted.mockExecFile).toHaveBeenCalledWith('pass', ['cp', 's', 'd'], expect.any(Object))
     })
@@ -296,7 +296,99 @@ describe('PassClient', () => {
       const entry = hoisted.captured[0]
       entry.emitData('secret\n')
       entry.emitClose(0)
-      await expect(promise).resolves.toBe('secret')
+      await      expect(promise).resolves.toBe('secret')
     })
   })
 })
+
+// ===========================================================================
+// Gaps de branches — cobertura quirúrgica (Lima 87.03% → 95%+)
+// ===========================================================================
+
+describe('PassClient — surgical branch coverage', () => {
+  describe('execPass stderr vacío fallback', () => {
+    it('throws "pass exited with code N" cuando stderr vacío + non-zero exit', async () => {
+      const c = makeClient()
+      const promise = c.get('proton/bridge')
+      const entry = hoisted.captured[0]
+      // Importante: NO emitStderr() → forzar el fallback `|| \`pass exited with code ${code}\``
+      entry.emitClose(1)
+      await expect(promise).rejects.toThrow(PassError)
+      await expect(promise).rejects.toThrow('pass exited with code 1')
+    })
+
+    it('falls back al código de salida cuando stderr solo tiene whitespace', async () => {
+      const c = makeClient()
+      const promise = c.get('proton/bridge')
+      const entry = hoisted.captured[0]
+      entry.emitStderr('   \n  ') // whitespace — trim() → ''
+      entry.emitClose(2)
+      await expect(promise).rejects.toThrow('pass exited with code 2')
+    })
+  })
+
+  describe('Constructor DI — exec injectable', () => {
+    it('usa custom exec function cuando se inyecta en el constructor', async () => {
+      // Tipo explícito para `exec` (no exportado desde src/pass.ts) — fija el
+      // signature contra el parámetro del constructor y evita ambigüedad de
+      // tipos bajo strict + verbatimModuleSyntax.
+      type ExecFn = (
+        args: string[],
+        opts: { env: NodeJS.ProcessEnv; input?: string },
+      ) => Promise<string>
+      const customExec = vi.fn<ExecFn>().mockResolvedValue('custom-value')
+      const c = new PassClient({ storeDir: '/tmp/x' }, hoisted.silentLog, customExec)
+      const result = await c.get('valid/path')
+      expect(customExec).toHaveBeenCalledTimes(1)
+      expect(customExec).toHaveBeenCalledWith(['show', 'valid/path'], expect.objectContaining({ env: expect.any(Object) }))
+      expect(result).toBe('custom-value')
+      // El execFile REAL (mockExecFile) no se usa
+      expect(hoisted.mockExecFile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('non-Error en health()', () => {
+    it('health: ok=false cuando readdir rechaza con string', async () => {
+      hoisted.mockReaddir.mockRejectedValue('String filesystem error')
+      const result = await makeClient().health()
+      expect(result.ok).toBe(false)
+      expect(result.error).toBe('String filesystem error')
+    })
+  })
+
+  describe('audit() — catch { continue } en get fallido', () => {
+    it('audit: skips entries whose get() fails (continue branch)', async () => {
+      hoisted.mockReaddir.mockResolvedValue(['good-a.gpg', 'broken.gpg', 'good-b.gpg'])
+      const c = makeClient()
+      const promise = c.audit()
+
+      // Esperar a que audit() procese health + list y llame al primer get()
+      for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+      expect(hoisted.captured.length).toBe(1)
+
+      // good-a: corto 'a' → débil
+      hoisted.captured[0].emitData('a\n')
+      hoisted.captured[0].emitClose(0)
+      for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+      expect(hoisted.captured.length).toBe(2)
+
+      // broken: get() rechaza con error → branch `catch { continue }`
+      hoisted.captured[1].emitError(new Error('Decryption failed'))
+      for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+      expect(hoisted.captured.length).toBe(3)
+
+      // good-b: fuerte
+      hoisted.captured[2].emitData('StrongP@ss123\n')
+      hoisted.captured[2].emitClose(0)
+
+      const result = await promise
+      expect(result.storeOk).toBe(true)
+      expect(result.totalEntries).toBe(3)
+      expect(result.weakPasswords).toContain('good-a')
+      // 'broken' fue saltada, no aparece ni en weakPasswords ni en duplicates
+      expect(result.weakPasswords.some(p => p.includes('broken'))).toBe(false)
+      expect(result.duplicates.some(d => d.includes('broken'))).toBe(false)
+    })
+  })
+})
+

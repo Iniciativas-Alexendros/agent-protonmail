@@ -3,7 +3,7 @@
 [![CI](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/ci.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/ci.yml)
 [![Quality](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/codeql.yml/badge.svg)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/codeql.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96.67%25-brightgreen?logo=vitest&logoColor=white)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FIniciativas-Alexendros%2Fagent-protonsuite%2Fgh-pages%2Fcoverage-badge.json)](https://github.com/Iniciativas-Alexendros/agent-protonsuite/actions/workflows/quality.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](./package.json)
 
@@ -23,8 +23,8 @@
 ### 1. Instalar y compilar
 
 ```bash
-git clone https://github.com/Iniciativas-Alexendros/agent-protonmail.git
-cd agent-protonmail
+git clone https://github.com/Iniciativas-Alexendros/agent-protonsuite.git
+cd agent-protonsuite
 npm install && npm run build && npm run smoke
 ```
 
@@ -165,7 +165,7 @@ Ver [`scripts/install.sh`](./scripts/install.sh) para la instalación interactiv
 ```bash
 npm run typecheck   # TypeScript strict
 npm test            # 745 tests (Vitest)
-npm run coverage    # Coverage (v8 — 96.67% statements)
+npm run coverage    # Coverage (v8 — 97.62% statements)
 npm run build       # Compilación
 npm run smoke       # Verificación stdio
 npm run knip        # Unused deps/exports
@@ -181,17 +181,23 @@ npm run knip        # Unused deps/exports
 
 ---
 
-**Próximo módulo objetivo:** bridge-client.ts (80%), config.ts (79.23%), config/drive.ts (82.14%).
+**Próximo módulo objetivo (branches <95%)** — agrupado por dominio:
+- **Agent:** `agent/organizer.ts` (74.20%), `agent/executor.ts` (87.20%)
+- **MCP surface:** `server/drive.ts` (88.00%), `server/mail.ts` (89.60%)
+- **Ecosystem:** `ecosystem/discovery.ts` (86.80%)
 
 ### Progreso de cobertura
 
-| Fecha | Statements | Tests | Archivos | Hitos |
-|-------|-----------|-------|----------|-------|
-| Jul 2026 (Ronda 3b) | **93.72%** | **745** | **42** | server/drive.ts 89%→99%, http.ts +10 tests CORS/auth |
-| Jul 2026 (Ronda 2) | 92.68% | 692 | 41 | server.ts 73%→96%, smtp.ts 79%→98%, alerts/index.ts 76%→98% |
-| Jul 2026 (post-merge) | 90.65% | 619 | 38 | Repo renombrado, PRs #65 y #66 fusionados |
-| Jul 2026 (previo) | 90.67% | 640 | 42 | server/agent 64%→100%, organizer 68%→98%, http 69%→81%, rules 71%→100% |
-| Jun 2026 (base) | 61.7% | 258 | 21 | Reporte inicial |
+| Fecha | Statements | Branches | Tests | Archivos | Hitos |
+|-------|-----------|----------|-------|----------|-------|
+| Jul 2026 (Branch hunt) | **98.07%** | **93.63%** | **864** | **43** | diagnostics.ts 84%→96%, addresses.ts 90%→100%, pass.ts 87%→95% — Branch hunt top-3 cerrado |
+| Jul 2026 (Ronda 3b) | 93.72% | — | 745 | 42 | server/drive.ts 89%→99%, http.ts +10 tests CORS/auth |
+| Jul 2026 (Ronda 2) | 92.68% | — | 692 | 41 | server.ts 73%→96%, smtp.ts 79%→98%, alerts/index.ts 76%→98% |
+| Jul 2026 (post-merge) | 90.65% | 86.46% | 619 | 38 | Repo renombrado, PRs #65 y #66 fusionados |
+| Jul 2026 (previo) | 90.67% | — | 640 | 42 | server/agent 64%→100%, organizer 68%→98%, http 69%→81%, rules 71%→100% |
+| Jun 2026 (base) | 61.7% | — | 258 | 21 | Reporte inicial |
+
+*Conteo de tests canónico: `npx vitest run 2>&1 | grep -E 'Test Files|Tests'`. Los modos `vitest run --coverage` y `vitest list` pueden diferir ligeramente por su modelo de carga (transform/collect timing).*
 
 
 ## Licencia

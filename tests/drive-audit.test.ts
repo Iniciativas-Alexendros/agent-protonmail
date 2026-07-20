@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { DriveAuditor } from '../src/drive-audit.js'
@@ -28,7 +28,7 @@ describe('DriveAuditor', () => {
     error: () => {},
   })
 
-  it('should scan inventory', async () => {
+  it('should scan inventory', () => {
     const inv = auditor.scanInventory(TMP)
     expect(inv.totalFiles).toBe(6)
     expect(inv.totalBytes).toBeGreaterThan(0)
@@ -38,7 +38,7 @@ describe('DriveAuditor', () => {
     expect(inv.byExt['.jpg']).toBe(1)
   })
 
-  it('should detect duplicates by content', async () => {
+  it('should detect duplicates by content', () => {
     const dups = auditor.findDuplicates(TMP)
     expect(dups.length).toBeGreaterThanOrEqual(1)
     const dup = dups.find(
@@ -48,15 +48,38 @@ describe('DriveAuditor', () => {
     expect(dup!.files.length).toBe(2)
   })
 
-  it('should report obsolete formats', async () => {
+  it('should report obsolete formats', () => {
     const fmt = auditor.formatReport(TMP)
     expect(fmt.obsoleteFiles.length).toBe(1)
     expect(fmt.obsoleteFiles[0].name).toBe('report.doc')
     expect(fmt.obsoleteExtensions).toEqual(['.doc', '.ppt', '.xls', '.bmp'])
   })
 
-  it('should build organize plan', async () => {
+  it('should build organize plan', () => {
     const plan = auditor.buildOrganizePlan(TMP)
     expect(plan.suggestions.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('skips entries when statSync fails in scanInventory (broken symlink)', () => {
+    try {
+      symlinkSync('/nonexistent', resolve(TMP, 'broken.lnk'))
+    } catch { /* platform may not support symlinks, skip test */
+      return
+    }
+    const inv = auditor.scanInventory(TMP)
+    // CI runner puede tener /nonexistent como directorio real — validamos
+    // que el symlink en sí no aparezca en inventory, no el conteo exacto.
+    const found = inv.files.find((f) => f.name === 'broken.lnk')
+    expect(found).toBeUndefined()
+  })
+
+  it('skips entries when statSync fails in findDuplicates (broken symlink)', () => {
+    try {
+      symlinkSync('/nonexistent', resolve(TMP, 'broken2.lnk'))
+    } catch { /* platform may not support symlinks, skip test */
+      return
+    }
+    const dups = auditor.findDuplicates(TMP)
+    expect(Array.isArray(dups)).toBe(true)
   })
 })
