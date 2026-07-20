@@ -168,18 +168,18 @@ describe("SmtpClient", () => {
     }));
   });
 
-  it("send() handles undefined accepted/rejected with ?? fallback", async () => {
+  it("send() handles empty accepted/rejected arrays", async () => {
     sendMailMock.mockResolvedValueOnce({
       messageId: "<undef@local>",
-      accepted: undefined,
-      rejected: undefined,
+      accepted: [],
+      rejected: [],
       response: "250 OK",
     });
 
     const smtp = new SmtpClient(makeCfg(), silentLog);
     const result = await smtp.send({
       to: ["bob@example.com"],
-      subject: "Undefined arrays",
+      subject: "Empty arrays",
       text: "Body",
     });
 

@@ -42,9 +42,18 @@ const hoisted = vi.hoisted(() => {
   const mockList = vi.fn<() => Promise<Array<{ path: string }>>>()
   const mockOn = vi.fn()
 
+  /**
+   * Override flags para forzar capabilities/serverGreeting a undefined y asi
+   * cubrir las ramas `caps ? [...caps.keys()] : []` (falsy branch) y
+   * `serverGreeting ?? ''` (falsy branch). Se aplican al siguiente constructor
+   * y vuelven a su valor por defecto tras consumirse.
+   */
+  let capsOverride: Map<string, unknown> | undefined | 'default' = 'default'
+  let greetingOverride: string | undefined | 'default' = 'default'
+
   class MockImapFlow {
-    capabilities: Map<string, unknown>
-    serverGreeting: string
+    capabilities: Map<string, unknown> | undefined
+    serverGreeting: string | undefined
     on = mockOn
     connect = mockConnect
     logout = mockLogout
@@ -55,9 +64,31 @@ const hoisted = vi.hoisted(() => {
 
     constructor(opts: Record<string, unknown>) {
       MockImapFlow.lastOpts = opts
-      this.capabilities = new Map([['IMAP4rev1', true]])
-      this.serverGreeting = '* OK Proton Bridge'
+      this.capabilities =
+        capsOverride === 'default'
+          ? new Map([['IMAP4rev1', true]])
+          : capsOverride
+      this.serverGreeting =
+        greetingOverride === 'default' ? '* OK Proton Bridge' : greetingOverride
+      // Reset por defecto para no contaminar otros tests
+      capsOverride = 'default'
+      greetingOverride = 'default'
     }
+
+    static setCaps(v: Map<string, unknown> | undefined): void {
+      capsOverride = v
+    }
+    static setGreeting(v: string | undefined): void {
+      greetingOverride = v
+    }
+
+    /**
+     * Importante: `setCaps`/`setGreeting` son consumidos por el SIGUIENTE Constructor
+     * y se restablecen a 'default' inmediatamente después. Si un test crea múltiples
+     * instancias de ImapFlow (p.ej. 'todas las capas ok' crea 3), solo la PRIMERA
+     * recibe el override — las siguientes vuelven al default porque el reset ocurrió
+     * al consumir. Para persistencia entre instancias, llamar set*/new/ alternadamente.
+     */
   }
 
   // --- Socket mock para createConnection ---
@@ -636,5 +667,66 @@ describe('Interface consistency', () => {
     const fail: AuthStatusDiagnostics = { ok: false, error: 'token expired' }
     expect(ok.error).toBeUndefined()
     expect(fail.error).toBeTruthy()
+  })
+})
+
+// ===========================================================================
+// Gaps de branches — Errores no-Error (String() fallback en catch)
+// ===========================================================================
+
+describe('diagnoseMail — non-Error throw fallbacks', () => {
+  it('handshake: err instanceof Error fallback (string thrown)', async () => {
+    // checkImapHandshake catches con `err instanceof Error ? err.message : String(err)`
+    // Branch: cuando algo lanza un valor no-Error (p.ej. string). El global
+    // beforeEach usa vi.resetAllMocks() así que no hay fuga entre tests.
+    hoisted.mockConnect.mockRejectedValue('Stringy handshake failure')
+    const promise = diagnoseMail(defaultBridgeCfg, makePasswordResolver())
+    hoisted.emitConnect()
+    const result = await promise
+    expect(result.imapHandshake!.ok).toBe(false)
+    expect(result.imapHandshake!.error).toBe('Stringy handshake failure')
+  })
+
+  it('auth: err instanceof Error fallback (string thrown)', async () => {
+    hoisted.mockConnect
+      .mockResolvedValueOnce(undefined) // checkImapHandshake ok
+      .mockRejectedValueOnce('Auth string error') // checkAuth — string throw
+    const promise = diagnoseMail(defaultBridgeCfg, makePasswordResolver())
+    hoisted.emitConnect()
+    const result = await promise
+    expect(result.auth!.ok).toBe(false)
+    expect(result.auth!.error).toBe('Auth string error')
+  })
+
+  it('folders: err instanceof Error fallback (string thrown)', async () => {
+    // Todas las capas previas (handshake + auth) conectan con éxito — el error viene de list().
+    hoisted.mockConnect.mockResolvedValue(undefined)
+    hoisted.mockList.mockRejectedValue('Folder string error')
+    const promise = diagnoseMail(defaultBridgeCfg, makePasswordResolver())
+    hoisted.emitConnect()
+    const result = await promise
+    expect(result.folders!.accessible).toBe(false)
+    expect(result.folders!.error).toBe('Folder string error')
+  })
+
+  it('handshake: greeting="" cuando serverGreeting es undefined (?? fallback)', async () => {
+    hoisted.mockConnect.mockResolvedValue(undefined)
+    hoisted.MockImapFlow.setGreeting(undefined) // próxima instancia: greeting undefined
+    const promise = diagnoseMail(defaultBridgeCfg, makePasswordResolver())
+    hoisted.emitConnect()
+    const result = await promise
+    expect(result.imapHandshake!.greeting).toBe('')
+    expect(result.imapHandshake!.capabilities).toContain('IMAP4rev1')
+    expect(result.imapHandshake!.ok).toBe(true)
+  })
+
+  it('handshake: capabilities=[] cuando caps es undefined (ternary falsy)', async () => {
+    hoisted.mockConnect.mockResolvedValue(undefined)
+    hoisted.MockImapFlow.setCaps(undefined) // próxima instancia: caps undefined
+    const promise = diagnoseMail(defaultBridgeCfg, makePasswordResolver())
+    hoisted.emitConnect()
+    const result = await promise
+    expect(result.imapHandshake!.capabilities).toEqual([])
+    expect(result.imapHandshake!.ok).toBe(true)
   })
 })
